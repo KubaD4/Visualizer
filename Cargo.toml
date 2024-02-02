@@ -1,6 +1,6 @@
 workspace = { members = ["bin"] }
 [package]
-name = "Visualizer_Tests"
+name = "Visualizer"
 version = "0.1.0"
 edition = "2021"
 

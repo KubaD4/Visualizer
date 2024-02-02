@@ -3,14 +3,14 @@
 version = 3
 
 [[package]]
-name = "Visualizer_Tests"
+name = "Visualizer"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
  "find_folder",
  "image 0.24.8",
  "noise",
- "piston2d-graphics 0.44.0",
+ "piston2d-graphics 0.42.0",
  "piston_window",
  "rand 0.8.5",
  "rayon",
@@ -103,7 +103,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "bin"
 version = "0.1.0"
 dependencies = [
- "Visualizer_Tests",
+ "Visualizer",
  "crossbeam-channel",
  "find_folder",
  "image 0.24.8",
