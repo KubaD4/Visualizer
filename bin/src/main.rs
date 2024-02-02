@@ -38,37 +38,77 @@ use Visualizer_Tests::Util::{
     convert_to_color_matrix, play_sound, Infos, DEFAULT_PNGS_PATH,
 };
 
-lazy_static! {
-    /// List of robot_map converted into frames to create a gif of all the movements
-    static ref INIT_FRAMES: Mutex<OtherFrames> = Mutex::new(OtherFrames::new());
-
-    /// List of coordinates that the robot has seen so far
-    static ref CURRENT_ROBOT_MAP: Mutex<Option<Vec<Vec<Option<Tile>>>>>  = Mutex::new(None);
-
-    static ref CURRENT_ROBOT_VIEW: Mutex<Vec<Vec<Option<Tile>>>> = Mutex::new(vec![vec![None; 3]; 3]);
-
-    static ref CURRENT_ROBOT_BACKPACK: Mutex<String>  = Mutex::new(String::new());  //it cant be mutex of Backpack because i cant use Backpack::new(), that is pub(crate)
-
-    static ref SCORE: Mutex<f32> = Mutex::new(0.0);
-
-    static ref CURRENT_ROBOT_COORDINATES: Mutex<(usize,usize)> = Mutex::new((0,0));
-}
-
 const DEFAULT_FONT_PATH: &str = "../font/font.otf";
 
 pub const MAP_DIM: usize = MAP_SIZE;
 const PLAY_SOUNDS: bool = false;
+
+trait Visualizable {
+    fn get_init_frames(&self) -> Arc<Mutex<OtherFrames>>;
+    fn get_current_robot_map(&self) -> Arc<Mutex<Option<Vec<Vec<Option<Tile>>>>>>;
+    fn get_current_robot_view(&self) -> Arc<Mutex<Vec<Vec<Option<Tile>>>>>;
+    fn get_current_robot_backpack(&self) -> Arc<Mutex<String>>;
+    fn get_score(&self) -> Arc<Mutex<f32>>;
+    fn get_current_robot_coordinates(&self) -> Arc<Mutex<(usize, usize)>>;
+}
 struct MyRobot {
     robot: Robot,
-    iterations: Rc<Cell<usize>>,
+    iterations: Arc<Mutex<usize>>,
+    init_frames: Arc<Mutex<OtherFrames>>,
+    current_robot_map: Arc<Mutex<Option<Vec<Vec<Option<Tile>>>>>>,
+    current_robot_view: Arc<Mutex<Vec<Vec<Option<Tile>>>>>,
+    current_robot_backpack: Arc<Mutex<String>>,
+    score: Arc<Mutex<f32>>,
+    current_robot_coordinates: Arc<Mutex<(usize, usize)>>,
+}
+impl Visualizable for MyRobot {
+    fn get_init_frames(&self) -> Arc<Mutex<OtherFrames>> {
+        self.init_frames.clone()
+    }
+    fn get_current_robot_map(&self) -> Arc<Mutex<Option<Vec<Vec<Option<Tile>>>>>> {
+        self.current_robot_map.clone()
+    }
+    fn get_current_robot_view(&self) -> Arc<Mutex<Vec<Vec<Option<Tile>>>>> {
+        self.current_robot_view.clone()
+    }
+    fn get_current_robot_backpack(&self) -> Arc<Mutex<String>> {
+        self.current_robot_backpack.clone()
+    }
+    fn get_score(&self) -> Arc<Mutex<f32>> {
+        self.score.clone()
+    }
+    fn get_current_robot_coordinates(&self) -> Arc<Mutex<(usize, usize)>> {
+        self.current_robot_coordinates.clone()
+    }
+}
+impl MyRobot {
+    fn new(robot: Robot, iterations: Arc<Mutex<usize>>) -> Self {
+        Self {
+            robot,
+            iterations,
+            init_frames: Arc::new(Mutex::new(OtherFrames::new())),
+            current_robot_map: Arc::new(Mutex::new(None)),
+            current_robot_view: Arc::new(Mutex::new(vec![vec![None; 3]; 3])),
+            current_robot_backpack: Arc::new(Mutex::new(String::new())),
+            score: Arc::new(Mutex::new(0.0)),
+            current_robot_coordinates: Arc::new(Mutex::new((0, 0))),
+        }
+    }
 }
 
 fn main() {
     // Channel to send to the visualizer the robot_map while the robot moves in the process_tick()
     let (matrix_sender, matrix_receiver) = mpsc::channel();
+    let r = MyRobot::new(Robot::new(), Arc::new(Mutex::new(0)));
+    let init_frames = r.get_init_frames().clone();
+    let current_robot_map = r.get_current_robot_map().clone();
+    let current_robot_view = r.get_current_robot_view().clone();
+    let current_robot_backpack = r.get_current_robot_backpack().clone();
+    let score = r.get_score().clone();
+    let current_robot_coordinates = r.get_current_robot_coordinates().clone();
 
     //IMPLEMENTATION OF THE WORLDGENERATOR AND PROCESS TICK
-    thread::spawn(|| {
+    thread::spawn(move || {
         struct WorldGenerator {
             size: usize,
         }
@@ -145,7 +185,7 @@ fn main() {
         }
         impl Runnable for MyRobot {
             fn process_tick(&mut self, world: &mut World) {
-                let index = self.iterations.get(); //for debug
+                let index = *self.iterations.lock().unwrap(); //for debug
 
                 //example of AI to degub visualizer
                 //let environmental_conditions = look_at_sky(world);
@@ -204,7 +244,7 @@ fn main() {
 
                 //non modificare le seguenti righe
                 //the following is something like *INITIAL_ROBOT_MAP.lock().unwrap() = robot_map(world);
-                if let Err(e) = update_robot_map(world) {
+                if let Err(e) = update_robot_map(self, world) {
                     eprintln!("{}", e)
                 }
                 if let Err(e) = update_robot_view(self, world) {
@@ -213,7 +253,7 @@ fn main() {
 
                 //debug
                 println!("{}", index);
-                self.iterations.set(index + 1);
+                *self.iterations.lock().unwrap() = index + 1;
             }
 
             //non modificare le seguenti righe (potete aggiungere roba se vi serve per debug ma non rimuovete le chiamate a metodi ecc)
@@ -240,7 +280,7 @@ fn main() {
                     Event::EnergyConsumed(_) => {}
                     Event::Moved(_, _) => {
                         let new_coord = self.get_coordinate();
-                        if let Err(e) = update_robot_coord(new_coord) {
+                        if let Err(e) = update_robot_coord(self, new_coord) {
                             eprintln!(
                                 "couldnt lock CURRENT_ROBOT_COORDINATES in HandleEvent(Moved): {}",
                                 e
@@ -250,8 +290,8 @@ fn main() {
                         println!("moved");
 
                         //INIT_FRAMES.lock().unwrap().add_frame(&CURRENT_ROBOT_MAP.lock().unwrap());
-                        match INIT_FRAMES.lock() {
-                            Ok(mut init_frame_lock) => match &CURRENT_ROBOT_MAP.lock() {
+                        match self.get_init_frames().lock() {
+                            Ok(mut init_frame_lock) => match &self.get_current_robot_map().lock() {
                                 Ok(current_map_lock) => init_frame_lock.add_frame(current_map_lock),
                                 Err(e) => {
                                     eprintln!(
@@ -268,7 +308,7 @@ fn main() {
                     Event::TileContentUpdated(_, _) => {}
                     Event::AddedToBackpack(_, _) => {
                         let current_backpack = self.get_backpack();
-                        if let Err(e) = update_robot_backpack(current_backpack) {
+                        if let Err(e) = update_robot_backpack(self, current_backpack) {
                             eprintln!("Couldnt update backpack: {}", e)
                         }
                         //the function must sleep for a while to allow the sound to play (0.2s)
@@ -283,7 +323,7 @@ fn main() {
                     }
                     Event::RemovedFromBackpack(_, _) => {
                         let current_backpack = self.get_backpack();
-                        if let Err(e) = update_robot_backpack(current_backpack) {
+                        if let Err(e) = update_robot_backpack(self, current_backpack) {
                             eprintln!("Couldnt update backpack: {}", e)
                         }
                         if PLAY_SOUNDS {
@@ -319,10 +359,6 @@ fn main() {
             }
         }
 
-        let r = MyRobot {
-            robot: Robot::new(),
-            iterations: Rc::new(Cell::new(0)),
-        };
         struct Tool;
         impl Tools for Tool {}
         let mut generator = WorldGenerator::init(MAP_DIM);
@@ -332,8 +368,8 @@ fn main() {
             match run {
                 Ok(ref mut runner) => {
                     let _ = runner.game_tick();
-                    if i.get() > 500 {
-                        match INIT_FRAMES.lock() {
+                    if *i.lock().unwrap() > 500 {
+                        match init_frames.lock() {
                             Ok(lock) => {
                                 if let Err(e) = lock.from_frames_to_gif() {
                                     println!("error creating the gif: {}", e)
@@ -383,7 +419,7 @@ fn main() {
     thread::spawn(move || {
         loop {
             // Get the updated tile matrix
-            let updated_tile_matrix = match CURRENT_ROBOT_MAP.lock() {
+            let updated_tile_matrix = match current_robot_map.lock() {
                 Ok(lock) => lock.clone(),
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_MAP in sender thread: {} -> value has been set to a default value", e);
@@ -397,7 +433,7 @@ fn main() {
 
             let matrix_to_be_sent = initial_color_matrix.lock().unwrap().clone();
             let matrix_content_to_be_sent = initial_content_color_matrix.lock().unwrap().clone();
-            let coord_to_be_sent = match CURRENT_ROBOT_COORDINATES.lock() {
+            let coord_to_be_sent = match current_robot_coordinates.lock() {
                 Ok(lock) => *lock,
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_COORDINATES in sender thread: {} -> coordinates has been set to a default value:(0,0)", e);
@@ -405,7 +441,7 @@ fn main() {
                 }
             };
 
-            let view_to_be_sent = match CURRENT_ROBOT_VIEW.lock() {
+            let view_to_be_sent = match current_robot_view.lock() {
                 Ok(lock) => lock.clone(),
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_VIEW in sender thread: {} -> robot_view has been set to a default value", e);
@@ -413,7 +449,7 @@ fn main() {
                 }
             };
 
-            let backpack_to_be_sent = match CURRENT_ROBOT_BACKPACK.lock() {
+            let backpack_to_be_sent = match current_robot_backpack.lock() {
                 Ok(lock) => lock.clone(),
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_BACKPACK in sender thread: {} -> robot_backpack has been set to a default value", e);
@@ -584,54 +620,59 @@ fn main() {
     }
 }
 
-fn update_robot_view<'a>(
-    robot: &'a impl Runnable,
-    world: &'a World,
-) -> Result<(), PoisonError<MutexGuard<'a, Vec<Vec<Option<Tile>>>>>> {
+fn update_robot_view<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
+where
+    R: Visualizable + Runnable,
+{
     let new_view = robot_view(robot, world);
-    match CURRENT_ROBOT_VIEW.lock() {
+    match robot.get_current_robot_view().lock() {
         Ok(lock) => {
             let mut view_lock = lock;
             *view_lock = new_view;
             Ok(())
         }
-        Err(e) => Err(e),
+        Err(_) => Err("Mutex was poisoned".to_string()),
     }
 }
 
-fn update_robot_map(
-    world: &World,
-) -> Result<(), PoisonError<MutexGuard<Option<Vec<Vec<Option<Tile>>>>>>> {
+fn update_robot_map<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
+where
+    R: Visualizable + Runnable,
+{
     let new_map = robot_map(world); // Doing it before the assignment in order to reduce the lock() time
-    match CURRENT_ROBOT_MAP.lock() {
+    match robot.get_current_robot_map().lock() {
         Ok(lock) => {
             let mut map_lock = lock;
             *map_lock = new_map;
             Ok(())
         }
-        Err(e) => Err(e),
+        Err(_) => Err("Mutex was poisoned".to_string()),
     }
 }
 
-fn update_robot_coord(
-    new_coord: &Coordinate,
-) -> Result<(), PoisonError<MutexGuard<(usize, usize)>>> {
-    match CURRENT_ROBOT_COORDINATES.lock() {
+fn update_robot_coord<'a, R>(robot: &'a R, new_coord: &'a Coordinate) -> Result<(), String>
+where
+    R: Visualizable + Runnable,
+{
+    match robot.get_current_robot_coordinates().lock() {
         Ok(mut lock) => {
             *lock = (new_coord.get_row(), new_coord.get_col());
             Ok(())
         }
-        Err(e) => Err(e),
+        Err(_) => Err("Mutex was poisoned".to_string()),
     }
 }
 
-fn update_robot_backpack(back_pack: &BackPack) -> Result<(), PoisonError<MutexGuard<String>>> {
-    match CURRENT_ROBOT_BACKPACK.lock() {
+fn update_robot_backpack<'a, R>(robot: &'a R, back_pack: &'a BackPack) -> Result<(), String>
+where
+    R: Visualizable + Runnable,
+{
+    match robot.get_current_robot_backpack().lock() {
         Ok(mut lock) => {
             *lock = backpack_to_text(back_pack);
             Ok(())
         }
-        Err(e) => Err(e),
+        Err(_) => Err("Mutex was poisoned".to_string()),
     }
 }
 
