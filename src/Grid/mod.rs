@@ -29,10 +29,12 @@ pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
 // Assuming RECT_SIZE is defined to fit the grid within the window minus padding
 // And since we want the window 200 pixels greater than the grid, we adjust the calculation accordingly
 pub const RECT_SIZE: f64 = (MAP_SIZE as f64 - 200.0) / MAP_SIZE as f64;
-pub const WINDOW_SIZE: (usize, usize) = ((MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize);
+pub const WINDOW_SIZE: (usize, usize) = (
+    (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize,
+    (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize,
+);
 pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
-
 
 pub fn draw_optimized_grid(
     matrix: &ColorMatrix,
@@ -57,7 +59,7 @@ pub fn draw_optimized_grid(
         .transform
         .trans(-scroll_offset[0], -scroll_offset[1])
         .zoom(zoom_factor);
-    
+
     for j in visible_start_row..visible_end_row {
         let mut i = visible_start_col;
         while i < visible_end_col {
@@ -83,7 +85,7 @@ pub fn draw_optimized_grid(
 
     let white = [1.0, 1.0, 1.0, 1.0]; // RGBA color for white
 
-// Draw a white rectangle to the right of the last column
+    // Draw a white rectangle to the right of the last column
     let right_rect_x = grid_size.0 as f64 * rect_size * zoom_factor - scroll_offset[0];
     let right_rect_y = -scroll_offset[1]; // Start from the top
     let right_rect_width = rect_size * zoom_factor; // Width of one rectangle
@@ -91,12 +93,17 @@ pub fn draw_optimized_grid(
 
     rectangle(
         white,
-        [right_rect_x, right_rect_y, right_rect_width, right_rect_height],
+        [
+            right_rect_x,
+            right_rect_y,
+            right_rect_width,
+            right_rect_height,
+        ],
         transform,
         graphics,
     );
 
-// Draw a white rectangle below the last row
+    // Draw a white rectangle below the last row
     let bottom_rect_x = -scroll_offset[0]; // Start from the left
     let bottom_rect_y = grid_size.1 as f64 * rect_size * zoom_factor - scroll_offset[1];
     let bottom_rect_width = grid_size.0 as f64 * rect_size * zoom_factor; // Width of the entire grid
@@ -104,7 +111,12 @@ pub fn draw_optimized_grid(
 
     rectangle(
         white,
-        [bottom_rect_x, bottom_rect_y, bottom_rect_width, bottom_rect_height],
+        [
+            bottom_rect_x,
+            bottom_rect_y,
+            bottom_rect_width,
+            bottom_rect_height,
+        ],
         transform,
         graphics,
     );
@@ -128,4 +140,3 @@ pub fn draw_text(
         )
         .unwrap();
 }
-

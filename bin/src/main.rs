@@ -1,24 +1,20 @@
-use std::cell::Cell;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::sync::{Arc, mpsc, Mutex, MutexGuard, PoisonError};
-use std::thread;
-use std::time::Duration;
 use lazy_static::lazy_static;
-use piston_window::{Button, clear, G2d, Glyphs, Key, MouseScrollEvent, OpenGL, PistonWindow, PressEvent, ReleaseEvent, Size, WindowSettings};
-use rand::{Rng, thread_rng};
+use piston_window::{
+    clear, Button, G2d, Glyphs, Key, MouseScrollEvent, OpenGL, PistonWindow, PressEvent,
+    ReleaseEvent, Size, WindowSettings,
+};
+use rand::{thread_rng, Rng};
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
-use robotics_lib::interface::{put, robot_map};
-use robotics_lib::interface::{destroy, Direction, go, robot_view};
 use robotics_lib::interface::Direction::{Down, Left, Right, Up};
 use robotics_lib::interface::Tools;
-use robotics_lib::runner::{Robot, Runnable, Runner};
+use robotics_lib::interface::{destroy, go, robot_view, Direction};
+use robotics_lib::interface::{put, robot_map};
 use robotics_lib::runner::backpack::BackPack;
+use robotics_lib::runner::{Robot, Runnable, Runner};
 use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::environmental_conditions::EnvironmentalConditions;
 use robotics_lib::world::environmental_conditions::WeatherType::{Rainy, Sunny};
-use robotics_lib::world::tile::{Content, Tile};
 use robotics_lib::world::tile::Content::{
     Bank, Bin, Building, Bush, Coin, Crate, Fire, Fish, Garbage, JollyBlock, Market, Rock,
     Scarecrow, Tree, Water,
@@ -26,11 +22,21 @@ use robotics_lib::world::tile::Content::{
 use robotics_lib::world::tile::TileType::{
     DeepWater, Grass, Hill, Lava, Mountain, Sand, ShallowWater, Snow, Street, Teleport,
 };
-use robotics_lib::world::World;
+use robotics_lib::world::tile::{Content, Tile};
 use robotics_lib::world::world_generator::Generator;
+use robotics_lib::world::World;
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::{mpsc, Arc, Mutex, MutexGuard, PoisonError};
+use std::thread;
+use std::time::Duration;
 use Visualizer_Tests::GifFrame::Frames as OtherFrames;
 use Visualizer_Tests::Grid::*;
-use Visualizer_Tests::Util::{backpack_to_text, clear_png_files_in_directory, convert_content_to_color_matrix, convert_to_color_matrix, DEFAULT_PNGS_PATH, Infos, play_sound};
+use Visualizer_Tests::Util::{
+    backpack_to_text, clear_png_files_in_directory, convert_content_to_color_matrix,
+    convert_to_color_matrix, play_sound, Infos, DEFAULT_PNGS_PATH,
+};
 
 lazy_static! {
     /// List of robot_map converted into frames to create a gif of all the movements
@@ -48,8 +54,7 @@ lazy_static! {
     static ref CURRENT_ROBOT_COORDINATES: Mutex<(usize,usize)> = Mutex::new((0,0));
 }
 
-const DEFAULT_FONT_PATH: &str = "/Users/kuba/CLionProjects/Patrignani_Project_copia2/Visualizer/font/font.otf";
-
+const DEFAULT_FONT_PATH: &str = "../font/font.otf";
 
 pub const MAP_DIM: usize = MAP_SIZE;
 const PLAY_SOUNDS: bool = false;
@@ -171,35 +176,31 @@ fn main() {
                     }
                 }
                 let _ = go(self, world, direction);
-                if index%2==0 {
+                if index % 2 == 0 {
                     let _ = destroy(self, world, Direction::Right);
                     let _ = destroy(self, world, Direction::Left);
                     let _ = destroy(self, world, Direction::Up);
                     let _ = destroy(self, world, Direction::Down);
                 } else {
                     let boh = thread_rng().gen_range(0..=1);
-                    if boh==0 {
-                        if let Err(_) = put(self,world,Rock(1),1,Right) {
-                            if let Err(_) = put(self,world,Rock(1),1,Left) {
-                                if let Err(_) = put(self,world,Rock(1),1,Down) {
-                                    if let Err(_) = put(self,world,Rock(1),1,Up) {
-                                    }
+                    if boh == 0 {
+                        if let Err(_) = put(self, world, Rock(1), 1, Right) {
+                            if let Err(_) = put(self, world, Rock(1), 1, Left) {
+                                if let Err(_) = put(self, world, Rock(1), 1, Down) {
+                                    if let Err(_) = put(self, world, Rock(1), 1, Up) {}
                                 }
                             }
                         }
                     } else {
-                        if let Err(_) = put(self,world,Garbage(1),1,Right) {
-                            if let Err(_) = put(self,world,Garbage(1),1,Left) {
-                                if let Err(_) = put(self,world,Garbage(1),1,Down) {
-                                    if let Err(_) = put(self,world,Garbage(1),1,Up) {
-
-                                    }
+                        if let Err(_) = put(self, world, Garbage(1), 1, Right) {
+                            if let Err(_) = put(self, world, Garbage(1), 1, Left) {
+                                if let Err(_) = put(self, world, Garbage(1), 1, Down) {
+                                    if let Err(_) = put(self, world, Garbage(1), 1, Up) {}
                                 }
                             }
                         }
                     }
                 }
-
 
                 //non modificare le seguenti righe
                 //the following is something like *INITIAL_ROBOT_MAP.lock().unwrap() = robot_map(world);
@@ -220,12 +221,11 @@ fn main() {
                 match event {
                     Event::Ready => {
                         //clears the path were pngs are writted/read from to produce the gif
-                        if let Err(e)= clear_png_files_in_directory(DEFAULT_PNGS_PATH) {
-                            eprintln!("Couldnt clear png path: {}",e)
+                        if let Err(e) = clear_png_files_in_directory(DEFAULT_PNGS_PATH) {
+                            eprintln!("Couldnt clear png path: {}", e)
                         }
                     }
-                    Event::Terminated => {
-                    }
+                    Event::Terminated => {}
                     Event::TimeChanged(_) => {
                         if PLAY_SOUNDS {
                             thread::spawn(|| {
@@ -269,7 +269,7 @@ fn main() {
                     Event::AddedToBackpack(_, _) => {
                         let current_backpack = self.get_backpack();
                         if let Err(e) = update_robot_backpack(current_backpack) {
-                            eprintln!("Couldnt update backpack: {}",e)
+                            eprintln!("Couldnt update backpack: {}", e)
                         }
                         //the function must sleep for a while to allow the sound to play (0.2s)
                         // so it is better to do it in another thread and let the main function keep going
@@ -284,7 +284,7 @@ fn main() {
                     Event::RemovedFromBackpack(_, _) => {
                         let current_backpack = self.get_backpack();
                         if let Err(e) = update_robot_backpack(current_backpack) {
-                            eprintln!("Couldnt update backpack: {}",e)
+                            eprintln!("Couldnt update backpack: {}", e)
                         }
                         if PLAY_SOUNDS {
                             thread::spawn(|| {
@@ -336,7 +336,7 @@ fn main() {
                         match INIT_FRAMES.lock() {
                             Ok(lock) => {
                                 if let Err(e) = lock.from_frames_to_gif() {
-                                    println!("error creating the gif: {}",e)
+                                    println!("error creating the gif: {}", e)
                                 }
                             }
                             Err(e) => {
@@ -351,7 +351,7 @@ fn main() {
         }
     });
 
-    let window_size = Size::from((WINDOW_SIZE.0 as u32,WINDOW_SIZE.1 as u32));
+    let window_size = Size::from((WINDOW_SIZE.0 as u32, WINDOW_SIZE.1 as u32));
     println!("building window");
     let mut window: PistonWindow = WindowSettings::new("Grid", window_size)
         .exit_on_esc(true)
@@ -359,14 +359,11 @@ fn main() {
         .build()
         .unwrap();
 
-
     //let mut glyphs = window.load_font("/Users/kuba/CLionProjects/Patrignani_Project_copia2/Visualizer_Tests_Andrea/font/font.otf").unwrap();
     let mut glyphs = match window.load_font(DEFAULT_FONT_PATH) {
-        Ok(_glyphs) => {
-            Some(_glyphs)
-        }
+        Ok(_glyphs) => Some(_glyphs),
         Err(e) => {
-            eprintln!("Couldnt load glyphs: {}",e);
+            eprintln!("Couldnt load glyphs: {}", e);
             None
         }
     };
@@ -386,14 +383,13 @@ fn main() {
     thread::spawn(move || {
         loop {
             // Get the updated tile matrix
-            let updated_tile_matrix;
-            match CURRENT_ROBOT_MAP.lock() {
-                Ok(lock) => updated_tile_matrix = lock.clone(),
+            let updated_tile_matrix = match CURRENT_ROBOT_MAP.lock() {
+                Ok(lock) => lock.clone(),
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_MAP in sender thread: {} -> value has been set to a default value", e);
-                    updated_tile_matrix = None
+                    None
                 }
-            }
+            };
 
             //create a matrix containing the colors for each tile_type/contend at index [i][j]
             convert_content_to_color_matrix(&updated_tile_matrix, &initial_content_color_matrix);
@@ -401,47 +397,40 @@ fn main() {
 
             let matrix_to_be_sent = initial_color_matrix.lock().unwrap().clone();
             let matrix_content_to_be_sent = initial_content_color_matrix.lock().unwrap().clone();
-            let coord_to_be_sent;
-            match CURRENT_ROBOT_COORDINATES.lock() {
-                Ok(lock) => {
-                    coord_to_be_sent = *lock;
-                }
+            let coord_to_be_sent = match CURRENT_ROBOT_COORDINATES.lock() {
+                Ok(lock) => *lock,
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_COORDINATES in sender thread: {} -> coordinates has been set to a default value:(0,0)", e);
-                    coord_to_be_sent = (0, 0)
+                    (0, 0)
                 }
-            }
+            };
 
-            let view_to_be_sent;
-            match CURRENT_ROBOT_VIEW.lock() {
-                Ok(lock) => view_to_be_sent = lock.clone(),
+            let view_to_be_sent = match CURRENT_ROBOT_VIEW.lock() {
+                Ok(lock) => lock.clone(),
                 Err(e) => {
-                    view_to_be_sent = vec![vec![None; 3]; 3];
                     eprintln!("Couldnt lock CURRENT_ROBOT_VIEW in sender thread: {} -> robot_view has been set to a default value", e);
+                    vec![vec![None; 3]; 3]
                 }
-            }
+            };
 
-            let backpack_to_be_sent;
-            match CURRENT_ROBOT_BACKPACK.lock() {
-                Ok(lock) => {
-                    backpack_to_be_sent = lock.clone();
-                }
+            let backpack_to_be_sent = match CURRENT_ROBOT_BACKPACK.lock() {
+                Ok(lock) => lock.clone(),
                 Err(e) => {
                     eprintln!("Couldnt lock CURRENT_ROBOT_BACKPACK in sender thread: {} -> robot_backpack has been set to a default value", e);
-                    backpack_to_be_sent = String::new();
+                    String::new()
                 }
-            }
+            };
 
             match matrix_sender.send((
                 matrix_to_be_sent,
                 matrix_content_to_be_sent,
                 coord_to_be_sent,
                 view_to_be_sent,
-                backpack_to_be_sent
+                backpack_to_be_sent,
             )) {
                 Ok(_) => {
                     // The send was successful
-                },
+                }
                 Err(e) => {
                     // Handle the error
                     eprintln!("Failed to send data through the channel: {}\nWindow will use the default value for each informaton", e);
@@ -456,9 +445,8 @@ fn main() {
         vec![vec![[0.0, 0.0, 0.0, 1.0]; MAP_DIM]; MAP_DIM],
         (0, 0),
         vec![vec![None; 3]; 3],
-        String::new()
+        String::new(),
     );
-
 
     let mut scroll_offset = [0.0, 0.0];
     let mut zoom_factor = 1.0;
@@ -499,8 +487,8 @@ fn main() {
         }
 
         //mouse-zoom handling
-        if let Some(MouseEvent) = event.mouse_scroll_args() {
-            zoom_factor += MouseEvent[1] * ZOOM_AMOUNT;
+        if let Some(mouse_event) = event.mouse_scroll_args() {
+            zoom_factor += mouse_event[1] * ZOOM_AMOUNT;
             zoom_factor = zoom_factor.max(0.1); // Prevent zooming out too much
         }
 
@@ -647,7 +635,15 @@ fn update_robot_backpack(back_pack: &BackPack) -> Result<(), PoisonError<MutexGu
     }
 }
 
-fn draw_texts(vec1: &Option<&Vec<Option<Tile>>>, vec2: &Option<&Vec<Option<Tile>>>, vec3: &Option<&Vec<Option<Tile>>>, context: &piston_window::Context, graphics: &mut G2d, glyphs: &mut Glyphs, starting_text_y: u32 ) {
+fn draw_texts(
+    vec1: &Option<&Vec<Option<Tile>>>,
+    vec2: &Option<&Vec<Option<Tile>>>,
+    vec3: &Option<&Vec<Option<Tile>>>,
+    context: &piston_window::Context,
+    graphics: &mut G2d,
+    glyphs: &mut Glyphs,
+    starting_text_y: u32,
+) {
     let start_x: u32 = 50;
     let start_y: u32 = starting_text_y + 35;
     let offset: u32 = 25;

@@ -1,4 +1,6 @@
-
+use robotics_lib::runner::backpack::BackPack;
+use rodio::source::Source;
+use rodio::{Decoder, OutputStream};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -6,32 +8,33 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{fs, io};
-use robotics_lib::runner::backpack::BackPack;
-use rodio::source::Source;
-use rodio::{Decoder, OutputStream};
 
 use robotics_lib::world::tile::{Content, Tile, TileType};
 
-pub type Infos = (Vec<Vec<[f32; 4]>>, Vec<Vec<[f32; 4]>>, (usize, usize), Vec<Vec<Option<Tile>>>, String);
+pub type Infos = (
+    Vec<Vec<[f32; 4]>>,
+    Vec<Vec<[f32; 4]>>,
+    (usize, usize),
+    Vec<Vec<Option<Tile>>>,
+    String,
+);
 
 //pub const DEFAULT_PNGS_PATH: &str = "../pngs";
 //pub const DEFAULT_SOUNDS_PATH: &str = "../sounds";
-pub const DEFAULT_PNGS_PATH: &str = "/Users/kuba/CLionProjects/Patrignani_Project_copia2/Visualizer/pngs";
-pub const DEFAULT_SOUNDS_PATH: &str = "/Users/kuba/CLionProjects/Patrignani_Project_copia2/Visualizer/sounds";
+pub const DEFAULT_PNGS_PATH: &str = "../pngs";
+pub const DEFAULT_SOUNDS_PATH: &str = "../sounds";
 
 //Path where to save/load from png's
 
 pub(crate) fn id_to_path_string(id: usize) -> String {
-    let path;
     match id {
-        0..=9 => path = format!("{}/0000{}.png", DEFAULT_PNGS_PATH, id),
-        10..=99 => path = format!("{}/000{}.png", DEFAULT_PNGS_PATH, id),
-        100..=999 => path = format!("{}/00{}.png", DEFAULT_PNGS_PATH, id),
-        1000..=9999 => path = format!("{}/0{}.png", DEFAULT_PNGS_PATH, id),
-        10000..=99999 => path = format!("{}/{}.png", DEFAULT_PNGS_PATH, id),
-        _ => path = format!("99999/{}.png", DEFAULT_PNGS_PATH),
+        0..=9 => format!("{}/0000{}.png", DEFAULT_PNGS_PATH, id),
+        10..=99 => format!("{}/000{}.png", DEFAULT_PNGS_PATH, id),
+        100..=999 => format!("{}/00{}.png", DEFAULT_PNGS_PATH, id),
+        1000..=9999 => format!("{}/0{}.png", DEFAULT_PNGS_PATH, id),
+        10000..=99999 => format!("{}/{}.png", DEFAULT_PNGS_PATH, id),
+        _ => format!("99999/{}.png", DEFAULT_PNGS_PATH),
     }
-    path
 }
 
 pub fn gif_creator() -> Result<(), String> {
@@ -69,7 +72,7 @@ pub fn gif_creator() -> Result<(), String> {
             Err(e) => Err(e.to_string()),
         },
         Err(e) => Err(e.to_string()),
-    }
+    };
 }
 
 pub fn clear_png_files_in_directory(dir_path: &str) -> io::Result<()> {
@@ -129,21 +132,19 @@ pub(crate) fn save_image(map: &Vec<Vec<TileType>>, index: usize) {
 }*/
 
 pub(crate) fn match_color_to_type(tile_type: &TileType) -> (u8, u8, u8, u8) {
-
     match tile_type {
-        TileType::Grass =>  (0, 255, 0, 255),
+        TileType::Grass => (0, 255, 0, 255),
         TileType::Street => (0, 0, 0, 255),
-        TileType::ShallowWater =>  (0, 0, 255, 255),
+        TileType::ShallowWater => (0, 0, 255, 255),
         TileType::DeepWater => (0, 0, 128, 255),
-        TileType::Sand =>  (255, 255, 0, 255),
-        TileType::Hill =>  (255, 128, 0, 255),
-        TileType::Mountain =>  (128, 128, 128, 255),
-        TileType::Wall =>  (255, 128, 0, 255),
-        TileType::Teleport(_) =>  (255, 0, 255, 255),
+        TileType::Sand => (255, 255, 0, 255),
+        TileType::Hill => (255, 128, 0, 255),
+        TileType::Mountain => (128, 128, 128, 255),
+        TileType::Wall => (255, 128, 0, 255),
+        TileType::Teleport(_) => (255, 0, 255, 255),
         TileType::Lava => (255, 0, 0, 255),
-        TileType::Snow =>  (255, 255, 255, 255),
+        TileType::Snow => (255, 255, 255, 255),
     }
-
 }
 
 pub(crate) fn match_color_to_content(content: &Content) -> (u8, u8, u8, u8) {
@@ -267,4 +268,3 @@ pub fn convert_content_to_color_matrix(
         }
     }
 }
-
