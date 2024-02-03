@@ -254,7 +254,7 @@ impl Runnable for ExampleRobot {
     }
 }
 
-fn update_robot_view<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
+pub fn update_robot_view<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
 where
     R: Visualizable + Runnable,
 {
@@ -269,7 +269,7 @@ where
     }
 }
 
-fn update_robot_map<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
+pub fn update_robot_map<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
 where
     R: Visualizable + Runnable,
 {
@@ -284,7 +284,7 @@ where
     }
 }
 
-fn update_robot_coord<'a, R>(robot: &'a R, new_coord: &'a Coordinate) -> Result<(), String>
+pub fn update_robot_coord<'a, R>(robot: &'a R, new_coord: &'a Coordinate) -> Result<(), String>
 where
     R: Visualizable + Runnable,
 {
@@ -297,7 +297,7 @@ where
     }
 }
 
-fn update_robot_backpack<'a, R>(robot: &'a R, back_pack: &'a BackPack) -> Result<(), String>
+pub fn update_robot_backpack<'a, R>(robot: &'a R, back_pack: &'a BackPack) -> Result<(), String>
 where
     R: Visualizable + Runnable,
 {
