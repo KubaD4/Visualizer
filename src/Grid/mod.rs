@@ -45,8 +45,6 @@ pub fn draw_optimized_grid(
     scroll_offset: [f64; 2],
     zoom_factor: f64,
 ) {
-    clear([0.0; 4], graphics); // Clear the screen
-
     // Calculate visible area considering zoom and scroll
     let visible_start_col = ((scroll_offset[0] / zoom_factor) / rect_size).max(0.0) as usize;
     let visible_start_row = ((scroll_offset[1] / zoom_factor) / rect_size).max(0.0) as usize;

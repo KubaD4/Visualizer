@@ -3,3 +3,9 @@
 /src/.DS_Store
 /bin/src/.DS_Store
 /bin/.DS_Store
+/bin/target
+/bin/.cargo
+/.cargo
+/pngs/*
+/Cargo.lock
+!/pngs/.gitkeep
