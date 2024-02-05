@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use worldgen_unwrap::*;
 use Visualizer::robot::{ExampleRobot, Visualizable};
 use Visualizer::Grid::*;
 use Visualizer::Util::{
@@ -50,6 +51,8 @@ fn main() {
 
     //IMPLEMENTATION OF THE WORLDGENERATOR AND PROCESS TICK
     thread::spawn(move || {
+        /*
+        // WorldGenerator molto stupido di prova
         struct WorldGenerator {
             size: usize,
         }
@@ -124,10 +127,14 @@ fn main() {
                 (map, (0, 0), environmental_conditions, max_score, None)
             }
         }
+        let mut generator = WorldGenerator::init(MAP_DIM);
+        */
+
+        // WorldGenerator del nostro gruppo
+        let mut generator = worldgen_unwrap::public::WorldgeneratorUnwrap::init(false, None);
 
         struct Tool;
         impl Tools for Tool {}
-        let mut generator = WorldGenerator::init(MAP_DIM);
         let i = r.iterations.clone();
         let mut run = Runner::new(Box::new(r), &mut generator);
         loop {

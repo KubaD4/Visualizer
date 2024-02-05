@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 robotics_lib = { registry = "kellnr" }
+worldgen_unwrap = { registry = "kellnr" }
 #robotics_lib = { path = "../../Robotic-Lib" }
 Visualizer = { path = "../" }
 image = "0.24.8"
