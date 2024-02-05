@@ -31,6 +31,13 @@ const DEFAULT_FONT_PATH: &str = "../font/font.otf";
 pub const MAP_DIM: usize = MAP_SIZE;
 
 fn main() {
+    // ROBOT ANDREA
+    /*
+    use andrea_ai::AndreaRobot;
+    use clap::Parser;
+    let args = andrea_ai::Args::parse();
+    let r = AndreaRobot::new(Robot::new(), Arc::new(Mutex::new(0)), args);
+    */
     // Channel to send to the visualizer the robot_map while the robot moves in the process_tick()
     let (matrix_sender, matrix_receiver) = mpsc::channel();
     let r = ExampleRobot::new(Robot::new(), Arc::new(Mutex::new(0)));

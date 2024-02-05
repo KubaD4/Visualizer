@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-robotics_lib = { path = "../../Robotic-Lib" }
+robotics_lib = { registry = "kellnr" }
 Visualizer = { path = "../" }
 image = "0.24.8"
 rand = "0.8.5"
@@ -18,6 +18,8 @@ crossbeam-channel = "0.5.11"
 smallvec = "1.12.0"
 piston_window = "0.122.0"
 find_folder = "0.3"
+#andrea_ai = { path = "../../robot_ai" }
+clap = { version = "4.4.18", features = ["derive"] }
 
 
 [dependencies.piston2d-graphics]
