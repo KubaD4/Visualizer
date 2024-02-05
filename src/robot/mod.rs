@@ -81,20 +81,26 @@ impl Sentient for ExampleRobot {
         //example of AI to degub visualizer
         //let environmental_conditions = look_at_sky(world);
         let direction;
+        if index == 0 {
+             direction=Direction::Right;
+        } else {
+             direction=Direction::Down;
+        }
+        /*
         if index <= 25 {
             direction = Direction::Right;
-        } else if index > 25 && index <= 50 {
+        } else if index > 25 && index <= 27 {
             direction = Direction::Down;
-        } else if index > 50 && index <= 70 {
-            direction = Direction::Up;
-        } else if index > 70 && index <= 140 {
+        } else if index > 27 && index <= 52 {
             direction = Direction::Left;
-        } else if index > 140 && index <= 180 {
+        } else if index > 52 && index <= 54 {
             direction = Direction::Down;
-        } else if index > 180 && index <= 300 {
+        } else if index > 54 && index <= 79 {
             direction = Direction::Right;
-        } else if index > 450 && index <= 470 {
-            direction = Direction::Up;
+        } else if index > 79 && index <= 81 {
+            direction = Direction::Down;
+        } else if index > 81 && index <= 83 {
+            direction = Direction::Left;
         } else {
             let mut rng = rand::thread_rng();
             let rand_direction = rng.gen_range(0..=3);
@@ -106,6 +112,7 @@ impl Sentient for ExampleRobot {
                 _ => direction = Direction::Right,
             }
         }
+         */
         let _ = go(self, world, direction);
         if index % 2 == 0 {
             let _ = destroy(self, world, Direction::Right);

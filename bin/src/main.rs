@@ -14,7 +14,7 @@ use robotics_lib::world::tile::Content::{
 use robotics_lib::world::tile::TileType::{
     DeepWater, Grass, Hill, Lava, Mountain, Sand, ShallowWater, Snow, Street, Teleport,
 };
-use robotics_lib::world::tile::{Content, Tile};
+use robotics_lib::world::tile::{Content, Tile, TileType};
 use robotics_lib::world::world_generator::Generator;
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
@@ -23,9 +23,7 @@ use std::time::Duration;
 use worldgen_unwrap::*;
 use Visualizer::robot::{ExampleRobot, Visualizable};
 use Visualizer::Grid::*;
-use Visualizer::Util::{
-    convert_content_to_color_matrix, convert_to_color_matrix, Infos, DEFAULT_PNGS_PATH,
-};
+use Visualizer::Util::{convert_content_to_color_matrix, convert_to_color_matrix, Infos, DEFAULT_PNGS_PATH, match_color_to_type_piston, convert_robot_view_to_color_matrix, convert_robot_content_view_to_color_matrix};
 
 const DEFAULT_FONT_PATH: &str = "../font/font.otf";
 
@@ -51,7 +49,7 @@ fn main() {
 
     //IMPLEMENTATION OF THE WORLDGENERATOR AND PROCESS TICK
     thread::spawn(move || {
-        /*
+
         // WorldGenerator molto stupido di prova
         struct WorldGenerator {
             size: usize,
@@ -77,7 +75,7 @@ fn main() {
                 for _ in 0..self.size {
                     let mut row: Vec<Tile> = Vec::new();
                     for _ in 0..self.size {
-                        let i_tiletype = 3; //rng.gen_range(2..=5);//rng.gen_range(0..TileType::iter().len());
+                        let i_tiletype = rng.gen_range(3..=3);//rng.gen_range(0..TileType::iter().len());
                         let i_content = rng.gen_range(0..=2); //rng.gen_range(0..Content::iter().len());
                         let i_size = rng.gen_range(0..=2);
                         let tile_type = match i_tiletype {
@@ -95,10 +93,10 @@ fn main() {
                         };
                         let content = match i_content {
                             0 => Rock(i_size),
-                            1 => Tree(i_size),
+                            1 => Coin(i_size),
                             2 => Garbage(i_size),
                             3 => Fire,
-                            4 => Coin(2),
+                            4 => Tree(i_size),
                             5 => Bin(2..3),
                             6 => Crate(2..3),
                             7 => Bank(3..54),
@@ -128,10 +126,10 @@ fn main() {
             }
         }
         let mut generator = WorldGenerator::init(MAP_DIM);
-        */
+        //fine
 
         // WorldGenerator del nostro gruppo
-        let mut generator = worldgen_unwrap::public::WorldgeneratorUnwrap::init(false, None);
+        //TODO: let mut generator = worldgen_unwrap::public::WorldgeneratorUnwrap::init(false, None);
 
         struct Tool;
         impl Tools for Tool {}
@@ -164,6 +162,7 @@ fn main() {
     println!("building window");
     let mut window: PistonWindow = WindowSettings::new("Grid", window_size)
         .exit_on_esc(true)
+        .resizable(false)
         .graphics_api(OpenGL::V3_2)
         .build()
         .unwrap();
@@ -289,8 +288,8 @@ fn main() {
             match key {
                 Key::Up => scroll_offset[1] += SCROLL_AMOUNT,
                 Key::Down => scroll_offset[1] -= SCROLL_AMOUNT,
-                Key::Left => scroll_offset[0] -= SCROLL_AMOUNT,
-                Key::Right => scroll_offset[0] += SCROLL_AMOUNT,
+                Key::Left => scroll_offset[0] += SCROLL_AMOUNT,
+                Key::Right => scroll_offset[0] -= SCROLL_AMOUNT,
                 _ => {}
             }
         }
@@ -329,6 +328,31 @@ fn main() {
         window.draw_2d(&event, |context, graphics, device| {
             clear([0.0, 0.0, 0.0, 1.0], graphics);
 
+            /*
+            draw_robot_view(
+                &convert_robot_view_to_color_matrix(&current_tuple_information.3),
+                //&convert_robot_view_to_color_matrix(&vec![vec![Some(temp); 3]; 3]),
+                context,
+                graphics,
+                50.0,
+            );
+
+             */
+
+            let robot_view_color_matrix: &Arc<Mutex<Vec<Vec<[f32; 4]>>>> = &Arc::new(Mutex::new(Vec::new()));
+            //&convert_content_to_color_matrix(&Some(current_tuple_information.3),robot_view_color_matrix.lock().unwrap().clone()),
+
+            draw_robot_view(
+                &convert_robot_view_to_color_matrix(&current_tuple_information.3),
+                //&convert_robot_view_to_color_matrix(&vec![vec![Some(temp); 3]; 3]),
+                //&vec![vec![[50.0,50.0,50.0,1.0]; 3]; 3],
+                &convert_robot_content_view_to_color_matrix(&current_tuple_information.3),
+                context,
+                graphics,
+                50.0,
+            );
+
+
             draw_optimized_grid(
                 &current_tuple_information.0,
                 /*&current_tuple_matrix.1 ,*/ context,
@@ -356,7 +380,7 @@ fn main() {
                 let starting_text_x:u32 = 50;
                 //let starting_text_x:u32 = -scroll_offset[0] as u32 + 50;
                 //let starting_text_y:u32 = 490;
-                let starting_text_y:u32 = ((MAP_DIM as f64 * RECT_SIZE /* * zoom_factor - scroll_offset[1]*/)+35.0) as u32;
+                let starting_text_y:u32 = 785;//((MAP_DIM as f64 * RECT_SIZE /* * zoom_factor - scroll_offset[1]*/)+35.0) as u32;
                 //coordinates
                 draw_text(
                     &context,

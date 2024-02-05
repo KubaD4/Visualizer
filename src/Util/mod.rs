@@ -182,7 +182,6 @@ pub fn match_color_to_type_piston(tile_type: &TileType) -> [f32; 4] {
 
 pub fn match_content_color_to_type_piston(tile_contet: &Content) -> [f32; 4] {
     let almost_result = match_color_to_content(tile_contet);
-
     [
         almost_result.0 as f32,
         almost_result.1 as f32,
@@ -248,6 +247,40 @@ pub fn convert_to_color_matrix(
             }
         }
     }
+}
+
+pub fn convert_robot_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<Vec<[f32; 4]>> {
+    let mut result = vec![vec![[0.0, 0.0, 0.0, 1.0]; 3]; 3];
+
+
+    for (i, row) in view.iter().enumerate() {
+        for (j, tile_option) in row.iter().enumerate() {
+            let color = match tile_option {
+                Some(tile) => match_color_to_type_piston(&tile.tile_type),
+                None => [0.0, 0.0, 0.0, 0.0],
+            };
+            result[j][i] = color;
+        }
+    }
+
+    result
+}
+
+pub fn convert_robot_content_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<Vec<[f32; 4]>> {
+    let mut result = vec![vec![[0.0, 0.0, 0.0, 1.0]; 3]; 3];
+
+
+    for (i, row) in view.iter().enumerate() {
+        for (j, tile_option) in row.iter().enumerate() {
+            let color = match tile_option {
+                Some(tile) => match_content_color_to_type_piston(&tile.content),
+                None => [0.0, 0.0, 0.0, 0.0],
+            };
+            result[j][i] = color;
+        }
+    }
+
+    result
 }
 
 pub fn convert_content_to_color_matrix(

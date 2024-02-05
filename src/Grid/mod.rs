@@ -24,15 +24,17 @@ pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
  */
 
-pub const MAP_SIZE: usize = 750;
+pub const MAP_SIZE: usize = 800;
 pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
 // Assuming RECT_SIZE is defined to fit the grid within the window minus padding
 // And since we want the window 200 pixels greater than the grid, we adjust the calculation accordingly
-pub const RECT_SIZE: f64 = (MAP_SIZE as f64 - 200.0) / MAP_SIZE as f64;
+pub const RECT_SIZE: f64 = (/*MAP_SIZE as f64*/750.0 /*- 200.0*/) / MAP_SIZE as f64;
 pub const WINDOW_SIZE: (usize, usize) = (
-    (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize,
-    (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize,
+    950,
+    950,
 );
+
+    //((MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, );
 pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
 
@@ -94,7 +96,7 @@ pub fn draw_optimized_grid(
         [
             right_rect_x,
             right_rect_y,
-            right_rect_width,
+            10.0,//right_rect_width,
             right_rect_height,
         ],
         transform,
@@ -113,12 +115,56 @@ pub fn draw_optimized_grid(
             bottom_rect_x,
             bottom_rect_y,
             bottom_rect_width,
-            bottom_rect_height,
+            10.0,//bottom_rect_height,
         ],
         transform,
         graphics,
     );
 }
+
+pub fn draw_robot_view(
+    rect_matrix: &Vec<Vec<[f32; 4]>>,
+    circle_matrix: &Vec<Vec<[f32; 4]>>,
+    context: Context,
+    graphics: &mut G2d,
+    rect_size: f64,
+) {
+    let grid_start_x = 370.0;
+    let grid_start_y = 785.0;
+
+    // Iterate over the 3x3 matrix for rectangles
+    for (i, row) in rect_matrix.iter().enumerate() {
+        for (j, &rect_color) in row.iter().enumerate() {
+            // Calculate the position for each rectangle
+            let x = grid_start_x + (j as f64 * rect_size);
+            let y = grid_start_y + (i as f64 * rect_size);
+
+            // Draw the rectangle
+            rectangle(
+                rect_color,
+                [x, y, rect_size, rect_size],
+                context.transform,
+                graphics,
+            );
+
+
+            let circle_radius = rect_size / 4.0;
+            let circle_x = x + rect_size / 2.0 - circle_radius;
+            let circle_y = y + rect_size / 2.0 - circle_radius;
+            if let Some(&circle_color) = circle_matrix.get(j).and_then(|r| r.get(i)) {
+
+                ellipse(
+                    circle_color,
+                    [circle_x, circle_y, circle_radius * 2.0, circle_radius * 2.0],
+                    context.transform,
+                    graphics,
+                );
+            }
+
+        }
+    }
+}
+
 
 pub fn draw_text(
     ctx: &Context,
