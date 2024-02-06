@@ -1,8 +1,8 @@
 extern crate piston_window;
 
-use piston_window::types::Color;
 use piston_window::*;
-use piston_window::{clear, rectangle, Context, G2d};
+use piston_window::{Context, G2d, rectangle};
+use piston_window::types::Color;
 
 type ColorMatrix = Vec<Vec<[f32; 4]>>;
 /*
@@ -24,7 +24,7 @@ pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
  */
 
-pub const MAP_SIZE: usize = 800;
+pub const MAP_SIZE: usize = 500;
 pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
 // Assuming RECT_SIZE is defined to fit the grid within the window minus padding
 // And since we want the window 200 pixels greater than the grid, we adjust the calculation accordingly
@@ -34,9 +34,11 @@ pub const WINDOW_SIZE: (usize, usize) = (
     950,
 );
 
-    //((MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, );
+//((MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, );
 pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
+
+pub const ROBOT_COLOR: [f32; 4] = [191.0 / 255.0, 139.0 / 255.0, 255.0 / 255.0, 1.0];
 
 pub fn draw_optimized_grid(
     matrix: &ColorMatrix,
@@ -46,6 +48,8 @@ pub fn draw_optimized_grid(
     rect_size: f64,
     scroll_offset: [f64; 2],
     zoom_factor: f64,
+    coord_x: f64,
+    coord_y: f64,
 ) {
     // Calculate visible area considering zoom and scroll
     let visible_start_col = ((scroll_offset[0] / zoom_factor) / rect_size).max(0.0) as usize;
@@ -79,18 +83,27 @@ pub fn draw_optimized_grid(
                 transform,
                 graphics,
             );
+
+            //robot's position
+            let robot_x = coord_x * rect_size * zoom_factor - scroll_offset[0];
+            let robot_y = coord_y * rect_size * zoom_factor - scroll_offset[1];
+            let robot_rect_width = rect_size * zoom_factor;
+            rectangle(
+                ROBOT_COLOR,
+                [robot_x, robot_y, robot_rect_width, rect_size * zoom_factor],
+                transform,
+                graphics,
+            );
+
             i = end_col;
         }
     }
 
     let white = [1.0, 1.0, 1.0, 1.0]; // RGBA color for white
-
     // Draw a white rectangle to the right of the last column
     let right_rect_x = grid_size.0 as f64 * rect_size * zoom_factor - scroll_offset[0];
     let right_rect_y = -scroll_offset[1]; // Start from the top
-    let right_rect_width = rect_size * zoom_factor; // Width of one rectangle
     let right_rect_height = grid_size.1 as f64 * rect_size * zoom_factor; // Height of the entire grid
-
     rectangle(
         white,
         [
@@ -107,8 +120,6 @@ pub fn draw_optimized_grid(
     let bottom_rect_x = -scroll_offset[0]; // Start from the left
     let bottom_rect_y = grid_size.1 as f64 * rect_size * zoom_factor - scroll_offset[1];
     let bottom_rect_width = grid_size.0 as f64 * rect_size * zoom_factor; // Width of the entire grid
-    let bottom_rect_height = rect_size * zoom_factor; // Height of one rectangle
-
     rectangle(
         white,
         [
@@ -129,8 +140,8 @@ pub fn draw_robot_view(
     graphics: &mut G2d,
     rect_size: f64,
 ) {
-    let grid_start_x = 370.0;
-    let grid_start_y = 785.0;
+    let grid_start_x = 500.0;
+    let grid_start_y = 770.0;
 
     // Iterate over the 3x3 matrix for rectangles
     for (i, row) in rect_matrix.iter().enumerate() {
@@ -152,7 +163,6 @@ pub fn draw_robot_view(
             let circle_x = x + rect_size / 2.0 - circle_radius;
             let circle_y = y + rect_size / 2.0 - circle_radius;
             if let Some(&circle_color) = circle_matrix.get(j).and_then(|r| r.get(i)) {
-
                 ellipse(
                     circle_color,
                     [circle_x, circle_y, circle_radius * 2.0, circle_radius * 2.0],
@@ -160,7 +170,6 @@ pub fn draw_robot_view(
                     graphics,
                 );
             }
-
         }
     }
 }

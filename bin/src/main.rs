@@ -1,12 +1,16 @@
-use piston_window::{
-    clear, Button, G2d, Glyphs, Key, MouseScrollEvent, OpenGL, PistonWindow, PressEvent,
-    ReleaseEvent, Size, WindowSettings,
-};
-use rand::{thread_rng, Rng};
+use std::collections::HashMap;
+use std::sync::{Arc, mpsc, Mutex};
+use std::thread;
+use std::time::Duration;
+
+use piston_window::{Button, clear, G2d, Glyphs, Key, OpenGL, PistonWindow, PressEvent, ReleaseEvent, Size, UpdateEvent, WindowSettings};
+use rand::{Rng, thread_rng};
+
 use robotics_lib::interface::Tools;
 use robotics_lib::runner::{Robot, Runner};
 use robotics_lib::world::environmental_conditions::EnvironmentalConditions;
 use robotics_lib::world::environmental_conditions::WeatherType::{Rainy, Sunny};
+use robotics_lib::world::tile::{Content, Tile};
 use robotics_lib::world::tile::Content::{
     Bank, Bin, Building, Bush, Coin, Crate, Fire, Fish, Garbage, JollyBlock, Market, Rock,
     Scarecrow, Tree, Water,
@@ -14,18 +18,13 @@ use robotics_lib::world::tile::Content::{
 use robotics_lib::world::tile::TileType::{
     DeepWater, Grass, Hill, Lava, Mountain, Sand, ShallowWater, Snow, Street, Teleport,
 };
-use robotics_lib::world::tile::{Content, Tile, TileType};
 use robotics_lib::world::world_generator::Generator;
-use std::collections::HashMap;
-use std::sync::{mpsc, Arc, Mutex};
-use std::thread;
-use std::time::Duration;
-use worldgen_unwrap::*;
-use Visualizer::robot::{ExampleRobot, Visualizable};
 use Visualizer::Grid::*;
-use Visualizer::Util::{convert_content_to_color_matrix, convert_to_color_matrix, Infos, DEFAULT_PNGS_PATH, match_color_to_type_piston, convert_robot_view_to_color_matrix, convert_robot_content_view_to_color_matrix};
+//use worldgen_unwrap::*;
+use Visualizer::robot::{ExampleRobot, Visualizable};
+use Visualizer::Util::{convert_content_to_color_matrix, convert_robot_content_view_to_color_matrix, convert_robot_view_to_color_matrix, convert_to_color_matrix, Infos};
 
-const DEFAULT_FONT_PATH: &str = "../font/font.otf";
+const DEFAULT_FONT_PATH: &str = "/Users/kuba/CLionProjects/Patrignani_Project_copia2/Visualizer/font/font.otf";
 
 pub const MAP_DIM: usize = MAP_SIZE;
 
@@ -49,7 +48,6 @@ fn main() {
 
     //IMPLEMENTATION OF THE WORLDGENERATOR AND PROCESS TICK
     thread::spawn(move || {
-
         // WorldGenerator molto stupido di prova
         struct WorldGenerator {
             size: usize,
@@ -72,12 +70,21 @@ fn main() {
                 let mut rng = thread_rng();
                 let mut map: Vec<Vec<Tile>> = Vec::new();
                 // Initialize the map with default tiles
-                for _ in 0..self.size {
+                for i in 0..self.size {
                     let mut row: Vec<Tile> = Vec::new();
-                    for _ in 0..self.size {
-                        let i_tiletype = rng.gen_range(3..=3);//rng.gen_range(0..TileType::iter().len());
-                        let i_content = rng.gen_range(0..=2); //rng.gen_range(0..Content::iter().len());
-                        let i_size = rng.gen_range(0..=2);
+                    for j in 0..self.size {
+                        let i_tiletype = 3;//rng.gen_range(0..=3);//rng.gen_range(0..TileType::iter().len());
+                        let i_content= rng.gen_range(0..=2); //rng.gen_range(0..Content::iter().len());
+                        /*
+                        if i == 0 {
+                            i_content = 3;
+                        } else if i == 2 {
+                            i_content = 1;
+                        } else {
+                            i_content = 16
+                        }   //first row filled with fire, third row filled with coin, other rows are None
+                         */
+                        let i_size = rng.gen_range(0..=20);
                         let tile_type = match i_tiletype {
                             0 => DeepWater,
                             1 => ShallowWater,
@@ -138,8 +145,9 @@ fn main() {
         loop {
             match run {
                 Ok(ref mut runner) => {
+                    //sleep(Duration::from_secs_f64(0.2));    //se si vuole che il robot vada più lento, scommentare + modificare il valore all'interno (f64)
                     let _ = runner.game_tick();
-                    if *i.lock().unwrap() > 500 {
+                    if *i.lock().unwrap() > 3000 {
                         match init_frames.lock() {
                             Ok(lock) => {
                                 if let Err(e) = lock.from_frames_to_gif() {
@@ -147,7 +155,7 @@ fn main() {
                                 }
                             }
                             Err(e) => {
-                                eprintln!("Couldnt lock INIT_FRAMES implies impossible to create a gif: {}",e)
+                                eprintln!("Couldnt lock INIT_FRAMES implies impossible to create a gif: {}", e)
                             }
                         }
                         break;
@@ -245,6 +253,7 @@ fn main() {
                 }
             }
             thread::sleep(Duration::from_secs_f64(0.02));
+            //thread::sleep(Duration::from_secs_f64(3.0));
         }
     });
 
@@ -260,6 +269,12 @@ fn main() {
     let mut zoom_factor = 1.0;
     //let mut zoom_in_pressed = false;
     //let mut zoom_out_pressed = false;
+    let mut right_pressed = false;
+    let mut left_pressed = false;
+    let mut up_pressed = false;
+    let mut down_pressed = false;
+    let mut should_draw_robot_view = true;
+    let mut should_draw_info_text = true;
 
     while let Some(event) = window.next() {
         if let Ok(updated_information) = matrix_receiver.try_recv() {
@@ -268,9 +283,11 @@ fn main() {
 
         let coord_text = format!(
             "robot coordinates:({},{})",
-            current_tuple_information.2 .0, current_tuple_information.2 .1
+            current_tuple_information.2.1, current_tuple_information.2.0
         );
+        let coord_as_f64 = (current_tuple_information.2.1 as f64, current_tuple_information.2.0 as f64);
         //handle the + and - key keep pressed to zoom in or out
+
         /*
         event.update(|_| {
             if zoom_in_pressed {
@@ -283,28 +300,75 @@ fn main() {
         });
          */
 
-        //keyboard-scroll handling
+        //key pressed handling
         if let Some(Button::Keyboard(key)) = event.press_args() {
             match key {
-                Key::Up => scroll_offset[1] += SCROLL_AMOUNT,
-                Key::Down => scroll_offset[1] -= SCROLL_AMOUNT,
-                Key::Left => scroll_offset[0] += SCROLL_AMOUNT,
-                Key::Right => scroll_offset[0] -= SCROLL_AMOUNT,
+                Key::Up => {
+                    scroll_offset[1] -= SCROLL_AMOUNT;
+                    up_pressed = true;
+                }
+                Key::Down => {
+                    scroll_offset[1] += SCROLL_AMOUNT;
+                    down_pressed = true;
+                }
+                Key::Left => {
+                    scroll_offset[0] -= SCROLL_AMOUNT;
+                    left_pressed = true;
+                }
+                Key::Right => {
+                    scroll_offset[0] += SCROLL_AMOUNT;
+                    right_pressed = true;
+                }
+                Key::V => {
+                    should_draw_robot_view = !should_draw_robot_view
+                }
+                Key::T => {
+                    should_draw_info_text = !should_draw_info_text
+                }
+                _ => {}
+            }
+        }
+
+        //scrolling with keys being keep pressed
+        event.update(|_| {
+            if left_pressed {
+                scroll_offset[0] -= SCROLL_AMOUNT;
+            }
+            if right_pressed {
+                scroll_offset[0] += SCROLL_AMOUNT;
+            }
+            if down_pressed {
+                scroll_offset[1] += SCROLL_AMOUNT;
+            }
+            if up_pressed {
+                scroll_offset[1] -= SCROLL_AMOUNT;
+            }
+        });
+
+        //keys released -> stop scrolling
+        if let Some(Button::Keyboard(key)) = event.release_args() {
+            match key {
+                Key::Up => up_pressed = false,
+                Key::Down => down_pressed = false,
+                Key::Left => left_pressed = false,
+                Key::Right => right_pressed = false,
                 _ => {}
             }
         }
 
         //mouse-zoom handling
+        /*
         if let Some(mouse_event) = event.mouse_scroll_args() {
             zoom_factor += mouse_event[1] * ZOOM_AMOUNT;
             zoom_factor = zoom_factor.max(0.1); // Prevent zooming out too much
         }
+         */
 
         //keyboard-zoom handling
         if let Some(Button::Keyboard(key)) = event.press_args() {
             match key {
                 Key::Equals => {
-                    //oom_in_pressed = true;
+                    //zoom_in_pressed = true;
                     zoom_factor += ZOOM_AMOUNT;
                 }
                 Key::Minus => {
@@ -315,6 +379,7 @@ fn main() {
                 _ => {}
             }
 
+            /*
             //handling the +/- release-button acction to stop zoomming in or out and the scroll
             if let Some(Button::Keyboard(key)) = event.release_args() {
                 match key {
@@ -323,35 +388,24 @@ fn main() {
                     _ => {}
                 }
             }
+             */
         }
 
         window.draw_2d(&event, |context, graphics, device| {
             clear([0.0, 0.0, 0.0, 1.0], graphics);
 
-            /*
-            draw_robot_view(
-                &convert_robot_view_to_color_matrix(&current_tuple_information.3),
-                //&convert_robot_view_to_color_matrix(&vec![vec![Some(temp); 3]; 3]),
-                context,
-                graphics,
-                50.0,
-            );
-
-             */
-
-            let robot_view_color_matrix: &Arc<Mutex<Vec<Vec<[f32; 4]>>>> = &Arc::new(Mutex::new(Vec::new()));
-            //&convert_content_to_color_matrix(&Some(current_tuple_information.3),robot_view_color_matrix.lock().unwrap().clone()),
-
-            draw_robot_view(
-                &convert_robot_view_to_color_matrix(&current_tuple_information.3),
-                //&convert_robot_view_to_color_matrix(&vec![vec![Some(temp); 3]; 3]),
-                //&vec![vec![[50.0,50.0,50.0,1.0]; 3]; 3],
-                &convert_robot_content_view_to_color_matrix(&current_tuple_information.3),
-                context,
-                graphics,
-                50.0,
-            );
-
+            //draws a 3x3 grid with rectangles for the tile_type and circles for the content
+           if should_draw_robot_view {
+               draw_robot_view(
+                   &convert_robot_view_to_color_matrix(&current_tuple_information.3),
+                   //&convert_robot_view_to_color_matrix(&vec![vec![Some(temp); 3]; 3]),
+                   //&vec![vec![[50.0,50.0,50.0,1.0]; 3]; 3],
+                   &convert_robot_content_view_to_color_matrix(&current_tuple_information.3),
+                   context,
+                   graphics,
+                   50.0,
+               );
+           }
 
             draw_optimized_grid(
                 &current_tuple_information.0,
@@ -361,57 +415,47 @@ fn main() {
                 RECT_SIZE,
                 scroll_offset,
                 zoom_factor,
+                //the following is used to draw the robot position
+                coord_as_f64.0,
+                coord_as_f64.1,
             );
 
-            //draw_optimized_grid_with_limited_circles(&current_tuple_information.0, &current_tuple_information.1 ,context, graphics, RECT_SIZE, scroll_offset, zoom_factor, current_tuple_information.2);
+            if should_draw_info_text {
+                if let Some(ref mut glyphs) = glyphs {
+                    let starting_text_x: u32 = 50;
+                    let starting_text_y: u32 = 785;//((MAP_DIM as f64 * RECT_SIZE /* * zoom_factor - scroll_offset[1]*/)+35.0) as u32;
+                    //coordinates
+                    draw_text(
+                        &context,
+                        graphics,
+                        glyphs,
+                        [1.0; 4],
+                        [starting_text_x, starting_text_y],
+                        coord_text.as_str(),
+                    );
 
-            if let Some(ref mut glyphs) = glyphs {
-                //Draw text
-                /*
-                draw_text(
-                    &context,
-                    graphics,
-                    glyphs,
-                    [1.0; 4],
-                    [50, (MAP_DIM as f64 * RECT_SIZE * zoom_factor - scroll_offset[1]) as u32],
-                    coord_text.as_str(),
-                );
-                 */
-                let starting_text_x:u32 = 50;
-                //let starting_text_x:u32 = -scroll_offset[0] as u32 + 50;
-                //let starting_text_y:u32 = 490;
-                let starting_text_y:u32 = 785;//((MAP_DIM as f64 * RECT_SIZE /* * zoom_factor - scroll_offset[1]*/)+35.0) as u32;
-                //coordinates
-                draw_text(
-                    &context,
-                    graphics,
-                    glyphs,
-                    [1.0; 4],
-                    [starting_text_x, starting_text_y],
-                    coord_text.as_str(),
-                );
+                    //robot view
+                    draw_texts(
+                        &current_tuple_information.3.get(0),
+                        &current_tuple_information.3.get(1),
+                        &current_tuple_information.3.get(2),
+                        &context,
+                        graphics,
+                        glyphs,
+                        starting_text_y,
+                    );
 
-                //robot view
-                draw_texts(
-                    &current_tuple_information.3.get(0),
-                    &current_tuple_information.3.get(1),
-                    &current_tuple_information.3.get(2),
-                    &context,
-                    graphics,
-                    glyphs,
-                    starting_text_y
-                );
-
-                //backpack
-                draw_text(
-                    &context,
-                    graphics,
-                    glyphs,
-                    [1.0; 4],
-                    [starting_text_x, 30+starting_text_y+25*5],
-                    current_tuple_information.4.as_str(),
-                );
-                glyphs.factory.encoder.flush(device);
+                    //backpack
+                    draw_text(
+                        &context,
+                        graphics,
+                        glyphs,
+                        [1.0; 4],
+                        [starting_text_x, 30 + starting_text_y + 25 * 5],
+                        current_tuple_information.4.as_str(),
+                    );
+                    glyphs.factory.encoder.flush(device);
+                }
             }
         });
     }

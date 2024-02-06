@@ -250,7 +250,7 @@ pub fn convert_to_color_matrix(
 }
 
 pub fn convert_robot_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<Vec<[f32; 4]>> {
-    let mut result = vec![vec![[0.0, 0.0, 0.0, 1.0]; 3]; 3];
+    let mut result = vec![vec![[0.0, 0.0, 0.0, 0.0]; 3]; 3];
 
 
     for (i, row) in view.iter().enumerate() {

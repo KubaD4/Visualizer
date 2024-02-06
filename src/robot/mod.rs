@@ -9,7 +9,7 @@ use robotics_lib::interface::{put, robot_map};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::world::coordinates::Coordinate;
-use robotics_lib::world::tile::Content::{Garbage, Rock};
+use robotics_lib::world::tile::Content::{Coin, Garbage, Rock};
 use robotics_lib::world::tile::Tile;
 use robotics_lib::world::World;
 use std::sync::{Arc, Mutex};
@@ -59,6 +59,7 @@ impl Visualizable for ExampleRobot {
     fn get_current_robot_coordinates(&self) -> Arc<Mutex<(usize, usize)>> {
         self.current_robot_coordinates.clone()
     }
+
 }
 impl ExampleRobot {
     pub fn new(robot: Robot, iterations: Arc<Mutex<usize>>) -> Self {
@@ -81,7 +82,7 @@ impl Sentient for ExampleRobot {
         //example of AI to degub visualizer
         //let environmental_conditions = look_at_sky(world);
         let direction;
-        if index == 0 {
+        if index %2 == 0 {
              direction=Direction::Right;
         } else {
              direction=Direction::Down;
@@ -114,13 +115,13 @@ impl Sentient for ExampleRobot {
         }
          */
         let _ = go(self, world, direction);
-        if index % 2 == 0 {
+        if index < 300 {
             let _ = destroy(self, world, Direction::Right);
             let _ = destroy(self, world, Direction::Left);
             let _ = destroy(self, world, Direction::Up);
             let _ = destroy(self, world, Direction::Down);
         } else {
-            let boh = thread_rng().gen_range(0..=1);
+            let boh = thread_rng().gen_range(0..=2);
             if boh == 0 {
                 if let Err(_) = put(self, world, Rock(1), 1, Right) {
                     if let Err(_) = put(self, world, Rock(1), 1, Left) {
@@ -129,11 +130,19 @@ impl Sentient for ExampleRobot {
                         }
                     }
                 }
-            } else {
+            } else if boh == 1 {
                 if let Err(_) = put(self, world, Garbage(1), 1, Right) {
                     if let Err(_) = put(self, world, Garbage(1), 1, Left) {
                         if let Err(_) = put(self, world, Garbage(1), 1, Down) {
                             if let Err(_) = put(self, world, Garbage(1), 1, Up) {}
+                        }
+                    }
+                }
+            } else {
+                if let Err(_) = put(self, world, Coin(1), 1, Right) {
+                    if let Err(_) = put(self, world, Coin(1), 1, Left) {
+                        if let Err(_) = put(self, world, Coin(1), 1, Down) {
+                            if let Err(_) = put(self, world, Coin(1), 1, Up) {}
                         }
                     }
                 }
@@ -259,6 +268,7 @@ impl Runnable for ExampleRobot {
     fn get_backpack_mut(&mut self) -> &mut BackPack {
         &mut self.robot.backpack
     }
+
 }
 
 pub fn update_robot_view<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
