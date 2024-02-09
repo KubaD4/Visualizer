@@ -2,7 +2,7 @@ extern crate piston_window;
 
 use piston_window::*;
 use piston_window::{Context, G2d, rectangle};
-use piston_window::types::Color;
+use piston_window::types::{Color, ColorComponent};
 
 type ColorMatrix = Vec<Vec<[f32; 4]>>;
 /*
@@ -172,6 +172,55 @@ pub fn draw_robot_view(
             }
         }
     }
+}
+
+fn convert_colors(color:  [f64; 4]) ->  [f64; 4] {
+    [color.get(0).unwrap()/255.0,color.get(1).unwrap()/255.0,color.get(2).unwrap()/255.0,1.0]
+    //chiamo la funzione con valori decisi quindi so che contengono un valore -> unwrap non esplode
+}
+
+pub fn draw_energy_level(
+    energy_level: usize,
+    context: &Context,
+    graphics: &mut G2d,
+    start_x: f64, // Starting X position for the rectangle
+    start_y: f64, // Starting Y position for the rectangle
+) {
+    let length = (energy_level as f64 / 1000.0) * 100.0; //pixels -> if the energy is at the maximum value(1000) the rect will be 100pixel long
+
+    let color:[f32;4] = match energy_level {
+        801..=1000 => { // 80% to 100%
+            // Full green to lighter green
+            let factor = (energy_level as f64 - 800.0) / 200.0;
+            [0.0, ((1.0 - factor) * 139.0/255.0 + factor) as f32, 0.0, 1.0]
+        },
+        601..=800 => { // 60% to 80%
+            // Lighter green to orange
+            let factor = (energy_level as f64 - 600.0) / 200.0;
+            [((factor) * 255.0/255.0) as f32, ((1.0 - factor) * 255.0/255.0) as f32, 0.0, 1.0]
+        },
+        401..=600 => { // 40% to 60%
+            // Orange to red
+            [255.0/255.0, ((1.0 - ((energy_level as f64 - 400.0) / 200.0)) as f32) * 165.0/255.0, 0.0, 1.0]
+        },
+        201..=400 => { // 20% to 40%
+            // Red to light red
+            let factor = (energy_level as f64 - 200.0) / 200.0;
+            [1.0, (factor * 69.0/255.0) as f32, (factor * 69.0/255.0) as f32, 1.0]
+        },
+        _ => { // Below 20%
+            // Light red
+            [1.0, 0.69, 0.69, 1.0]
+        },
+    };
+
+    // Draw the energy level rectangle
+    rectangle(
+         color, // Color based on energy level
+        [start_x, start_y, length, 10.0], // x, y, width, height
+        context.transform,
+        graphics,
+    );
 }
 
 

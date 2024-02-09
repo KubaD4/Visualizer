@@ -20,7 +20,7 @@ use robotics_lib::world::tile::TileType::{
 };
 use robotics_lib::world::world_generator::Generator;
 use Visualizer::Grid::*;
-//use worldgen_unwrap::*;
+use worldgen_unwrap::*;
 use Visualizer::robot::{ExampleRobot, Visualizable};
 use Visualizer::Util::{convert_content_to_color_matrix, convert_robot_content_view_to_color_matrix, convert_robot_view_to_color_matrix, convert_to_color_matrix, Infos};
 
@@ -45,6 +45,7 @@ fn main() {
     let current_robot_backpack = r.get_current_robot_backpack().clone();
     let _score = r.get_score().clone();
     let current_robot_coordinates = r.get_current_robot_coordinates().clone();
+    let current_robot_energy = r.get_current_energy().clone();
 
     //IMPLEMENTATION OF THE WORLDGENERATOR AND PROCESS TICK
     thread::spawn(move || {
@@ -147,7 +148,7 @@ fn main() {
                 Ok(ref mut runner) => {
                     //sleep(Duration::from_secs_f64(0.2));    //se si vuole che il robot vada più lento, scommentare + modificare il valore all'interno (f64)
                     let _ = runner.game_tick();
-                    if *i.lock().unwrap() > 3000 {
+                    if *i.lock().unwrap() > 2000 {
                         match init_frames.lock() {
                             Ok(lock) => {
                                 if let Err(e) = lock.from_frames_to_gif() {
@@ -198,6 +199,21 @@ fn main() {
     let matrix_sender = matrix_sender.clone();
     thread::spawn(move || {
         loop {
+            let updated_energy_to_be_sent = match current_robot_energy.lock() {
+                Ok(lock) => lock.clone(),
+                Err(e) => {
+                    eprintln!("Couldnt lock CURRENT_ROBOT_ENERGY in sender thread: {} -> value has been set to a default value", e);
+                    0
+                }
+            };
+
+            let updated_score_to_be_sent = match _score.lock() {
+                Ok(lock) => lock.clone(),
+                Err(e) => {
+                    eprintln!("Couldnt lock SCORE in sender thread: {} -> value has been set to a default value", e);
+                    0.0f32
+                }
+            };
             // Get the updated tile matrix
             let updated_tile_matrix = match current_robot_map.lock() {
                 Ok(lock) => lock.clone(),
@@ -243,6 +259,8 @@ fn main() {
                 coord_to_be_sent,
                 view_to_be_sent,
                 backpack_to_be_sent,
+                updated_energy_to_be_sent,
+                updated_score_to_be_sent
             )) {
                 Ok(_) => {
                     // The send was successful
@@ -263,6 +281,8 @@ fn main() {
         (0, 0),
         vec![vec![None; 3]; 3],
         String::new(),
+        0usize,
+        0.0f32
     );
 
     let mut scroll_offset = [0.0, 0.0];
@@ -454,11 +474,86 @@ fn main() {
                         [starting_text_x, 30 + starting_text_y + 25 * 5],
                         current_tuple_information.4.as_str(),
                     );
+
+                    draw_energy(
+                        current_tuple_information.5,
+                        &context,
+                        graphics,
+                        glyphs,
+                    );
+
+                    draw_score(
+                        current_tuple_information.6,
+                        &context,
+                        graphics,
+                        glyphs,
+                    );
+
                     glyphs.factory.encoder.flush(device);
                 }
+
             }
         });
     }
+}
+
+fn draw_score(
+    score: f32,
+    context: &piston_window::Context,
+    graphics: &mut G2d,
+    glyphs: &mut Glyphs,
+) {
+
+    draw_text(
+        context,
+        graphics,
+        glyphs,
+        [1.0; 4],
+        [770, 20],
+        "SCORE:",
+    );
+    draw_text(
+        context,
+        graphics,
+        glyphs,
+        [1.0; 4],
+        [840, 20],
+        score.floor().to_string().as_str(),
+    );
+}
+
+fn draw_energy(
+    energy: usize,
+    context: &piston_window::Context,
+    graphics: &mut G2d,
+    glyphs: &mut Glyphs,
+) {
+    //ENERGY:
+    draw_text(
+        context,
+        graphics,
+        glyphs,
+        [1.0; 4],
+        [770, 55],
+        "ENERGY:",
+    );
+    //actual energy value
+    draw_text(
+        context,
+        graphics,
+        glyphs,
+        [1.0; 4],
+        [845, 55],
+        energy.to_string().as_str(),
+    );
+    //the rectangle
+    draw_energy_level(
+        energy,
+        context,
+        graphics,
+        770.0,
+        60.0
+    )
 }
 
 fn draw_texts(

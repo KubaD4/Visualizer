@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
 use robotics_lib::interface::Direction::{Down, Left, Right, Up};
-use robotics_lib::interface::{destroy, go, robot_view, Direction};
+use robotics_lib::interface::{destroy, go, robot_view, Direction, one_direction_view, get_score};
 use robotics_lib::interface::{put, robot_map};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::runner::{Robot, Runnable};
@@ -28,6 +28,7 @@ pub trait Visualizable {
     fn get_current_robot_backpack(&self) -> Arc<Mutex<String>>;
     fn get_score(&self) -> Arc<Mutex<f32>>;
     fn get_current_robot_coordinates(&self) -> Arc<Mutex<(usize, usize)>>;
+    fn get_current_energy(&self) -> Arc<Mutex<usize>>;
 }
 
 pub struct ExampleRobot {
@@ -39,6 +40,7 @@ pub struct ExampleRobot {
     current_robot_backpack: Arc<Mutex<String>>,
     score: Arc<Mutex<f32>>,
     current_robot_coordinates: Arc<Mutex<(usize, usize)>>,
+    current_robot_energy: Arc<Mutex<usize>>
 }
 impl Visualizable for ExampleRobot {
     fn get_init_frames(&self) -> Arc<Mutex<OtherFrames>> {
@@ -59,6 +61,9 @@ impl Visualizable for ExampleRobot {
     fn get_current_robot_coordinates(&self) -> Arc<Mutex<(usize, usize)>> {
         self.current_robot_coordinates.clone()
     }
+    fn get_current_energy(&self) -> Arc<Mutex<usize>> {
+        self.current_robot_energy.clone()
+    }
 
 }
 impl ExampleRobot {
@@ -72,6 +77,7 @@ impl ExampleRobot {
             current_robot_backpack: Arc::new(Mutex::new(String::new())),
             score: Arc::new(Mutex::new(0.0)),
             current_robot_coordinates: Arc::new(Mutex::new((0, 0))),
+            current_robot_energy: Arc::new(Mutex::new(0))
         }
     }
 }
@@ -81,6 +87,7 @@ impl Sentient for ExampleRobot {
 
         //example of AI to degub visualizer
         //let environmental_conditions = look_at_sky(world);
+        let _ = one_direction_view(self, world, Right, index);
         let direction;
         if index %2 == 0 {
              direction=Direction::Right;
@@ -121,8 +128,18 @@ impl Sentient for ExampleRobot {
             let _ = destroy(self, world, Direction::Up);
             let _ = destroy(self, world, Direction::Down);
         } else {
-            let boh = thread_rng().gen_range(0..=2);
-            if boh == 0 {
+            let contained_content;
+            if let Some(&size) = self.get_backpack().get_contents().get(&Rock(1)) {
+                contained_content = 0;
+            } else if let Some(&size) = self.get_backpack().get_contents().get(&Garbage(1)) {
+                contained_content = 1;
+            } else if let Some(&size) = self.get_backpack().get_contents().get(&Coin(1)) {
+                contained_content = 2;
+            } else {
+                contained_content = 3;
+            }
+
+            if contained_content == 0 {
                 if let Err(_) = put(self, world, Rock(1), 1, Right) {
                     if let Err(_) = put(self, world, Rock(1), 1, Left) {
                         if let Err(_) = put(self, world, Rock(1), 1, Down) {
@@ -130,7 +147,7 @@ impl Sentient for ExampleRobot {
                         }
                     }
                 }
-            } else if boh == 1 {
+            } else if contained_content == 1 {
                 if let Err(_) = put(self, world, Garbage(1), 1, Right) {
                     if let Err(_) = put(self, world, Garbage(1), 1, Left) {
                         if let Err(_) = put(self, world, Garbage(1), 1, Down) {
@@ -138,7 +155,7 @@ impl Sentient for ExampleRobot {
                         }
                     }
                 }
-            } else {
+            } else if contained_content == 2 {
                 if let Err(_) = put(self, world, Coin(1), 1, Right) {
                     if let Err(_) = put(self, world, Coin(1), 1, Left) {
                         if let Err(_) = put(self, world, Coin(1), 1, Down) {
@@ -165,6 +182,11 @@ impl Runnable for ExampleRobot {
         if let Err(e) = update_robot_view(self, world) {
             eprintln!("{}", e)
         }
+        let new_score = get_score(world);
+        if let Err(e) = update_robot_score(self, new_score) {
+            eprintln!("{}", e)
+        }
+
     }
 
     //non modificare le seguenti righe (potete aggiungere roba se vi serve per debug ma non rimuovete le chiamate a metodi ecc)
@@ -175,6 +197,7 @@ impl Runnable for ExampleRobot {
                 if let Err(e) = clear_png_files_in_directory(DEFAULT_PNGS_PATH) {
                     eprintln!("Couldnt clear png path: {}", e)
                 }
+
             }
             Event::Terminated => {}
             Event::TimeChanged(_) => {
@@ -187,8 +210,24 @@ impl Runnable for ExampleRobot {
                 }
             }
             Event::DayChanged(_) => {}
-            Event::EnergyRecharged(_) => {}
-            Event::EnergyConsumed(_) => {}
+            Event::EnergyRecharged(_) => {
+                let new_energy = self.get_energy();
+                if let Err(e) = update_robot_energy(self, new_energy) {
+                    eprintln!(
+                        "couldnt lock CURRENT_ROBOT_ENERGY in HandleEvent(Moved): {}",
+                        e
+                    )
+                }
+            }
+            Event::EnergyConsumed(_) => {
+                let new_energy = self.get_energy();
+                if let Err(e) = update_robot_energy(self, new_energy) {
+                    eprintln!(
+                        "couldnt lock CURRENT_ROBOT_ENERGY in HandleEvent(Moved): {}",
+                        e
+                    )
+                }
+            }
             Event::Moved(_, _) => {
                 let new_coord = self.get_coordinate();
                 if let Err(e) = update_robot_coord(self, new_coord) {
@@ -268,7 +307,6 @@ impl Runnable for ExampleRobot {
     fn get_backpack_mut(&mut self) -> &mut BackPack {
         &mut self.robot.backpack
     }
-
 }
 
 pub fn update_robot_view<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
@@ -321,6 +359,33 @@ where
     match robot.get_current_robot_backpack().lock() {
         Ok(mut lock) => {
             *lock = backpack_to_text(back_pack);
+            Ok(())
+        }
+        Err(_) => Err("Mutex was poisoned".to_string()),
+    }
+}
+
+//TODO: parte nuova in caso di problemi con github
+pub fn update_robot_score<'a, R>(robot: &'a R, new_score: f32) -> Result<(), String>
+where
+    R: Visualizable + Runnable,
+{
+    match robot.get_score().lock() {
+        Ok(mut lock) => {
+            *lock = new_score;
+            Ok(())
+        }
+        Err(_) => Err("Mutex was poisoned".to_string()),
+    }
+}
+
+pub fn update_robot_energy<'a, R>(robot: &'a R, new_energy: &'a Energy) -> Result<(), String>
+    where
+        R: Visualizable + Runnable,
+{
+    match robot.get_current_energy().lock() {
+        Ok(mut lock) => {
+            *lock = new_energy.get_energy_level();
             Ok(())
         }
         Err(_) => Err("Mutex was poisoned".to_string()),

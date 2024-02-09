@@ -17,6 +17,8 @@ pub type Infos = (
     (usize, usize),
     Vec<Vec<Option<Tile>>>,
     String,
+    usize,
+    f32
 );
 
 //pub const DEFAULT_PNGS_PATH: &str = "../pngs";
@@ -173,20 +175,20 @@ pub fn match_color_to_type_piston(tile_type: &TileType) -> [f32; 4] {
     let almost_result = match_color_to_type(tile_type);
 
     [
-        almost_result.0 as f32,
-        almost_result.1 as f32,
-        almost_result.2 as f32,
-        almost_result.3 as f32,
+        (almost_result.0 as f32)/255.0,
+        (almost_result.1 as f32)/255.0,
+        (almost_result.2 as f32)/255.0,
+        (almost_result.3 as f32)/255.0,
     ]
 }
 
 pub fn match_content_color_to_type_piston(tile_contet: &Content) -> [f32; 4] {
     let almost_result = match_color_to_content(tile_contet);
     [
-        almost_result.0 as f32,
-        almost_result.1 as f32,
-        almost_result.2 as f32,
-        almost_result.3 as f32,
+        (almost_result.0 as f32)/255.0,
+        (almost_result.1 as f32)/255.0,
+        (almost_result.2 as f32)/255.0,
+        (almost_result.3 as f32)/255.0,
     ]
 }
 
