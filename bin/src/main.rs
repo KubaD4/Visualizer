@@ -21,6 +21,7 @@ use robotics_lib::world::tile::TileType::{
 use robotics_lib::world::world_generator::Generator;
 use Visualizer::Grid::*;
 use worldgen_unwrap::*;
+//use worldgen_unwrap::*;
 use Visualizer::robot::{ExampleRobot, Visualizable};
 use Visualizer::Util::{convert_content_to_color_matrix, convert_robot_content_view_to_color_matrix, convert_robot_view_to_color_matrix, convert_to_color_matrix, Infos};
 
@@ -74,17 +75,28 @@ fn main() {
                 for i in 0..self.size {
                     let mut row: Vec<Tile> = Vec::new();
                     for j in 0..self.size {
-                        let i_tiletype = 3;//rng.gen_range(0..=3);//rng.gen_range(0..TileType::iter().len());
-                        let i_content= rng.gen_range(0..=2); //rng.gen_range(0..Content::iter().len());
-                        /*
+                        let i_tiletype;// = 3;//rng.gen_range(0..=9);//rng.gen_range(0..TileType::iter().len());
+                        let i_content;//=rng.gen_range(0..=2); //rng.gen_range(0..Content::iter().len());
+
+
                         if i == 0 {
-                            i_content = 3;
-                        } else if i == 2 {
                             i_content = 1;
+                        } else if i == 2 {
+                            i_content = 10;
                         } else {
                             i_content = 16
-                        }   //first row filled with fire, third row filled with coin, other rows are None
-                         */
+                        }   //first row filled with Coin, third row filled with Fish, other rows are None
+
+                        if i == 0 {
+                            i_tiletype = 2;
+                        } else if i == 2 {
+                            i_tiletype = 1;
+                        } else {
+                            i_tiletype = 3
+                        }   //first row filled with Sand, third row filled with Street, other rows are Grass
+
+
+
                         let i_size = rng.gen_range(0..=20);
                         let tile_type = match i_tiletype {
                             0 => DeepWater,
@@ -388,6 +400,10 @@ fn main() {
         if let Some(Button::Keyboard(key)) = event.press_args() {
             match key {
                 Key::Equals => {
+                    //zoom_in_pressed = true;
+                    zoom_factor += ZOOM_AMOUNT;
+                }
+                Key::Plus => {
                     //zoom_in_pressed = true;
                     zoom_factor += ZOOM_AMOUNT;
                 }

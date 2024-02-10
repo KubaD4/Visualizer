@@ -259,7 +259,7 @@ pub fn convert_robot_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<
         for (j, tile_option) in row.iter().enumerate() {
             let color = match tile_option {
                 Some(tile) => match_color_to_type_piston(&tile.tile_type),
-                None => [0.0, 0.0, 0.0, 0.0],
+                None => [105.0/255.0 , 105.0/255.0 , 105.0/255.0 , 1.0],
             };
             result[j][i] = color;
         }

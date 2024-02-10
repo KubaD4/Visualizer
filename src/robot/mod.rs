@@ -87,14 +87,22 @@ impl Sentient for ExampleRobot {
 
         //example of AI to degub visualizer
         //let environmental_conditions = look_at_sky(world);
-        let _ = one_direction_view(self, world, Right, index);
+        //let _ = one_direction_view(self, world, Right, index);
+        let _ = one_direction_view(self, world, Right, 5);
+        /*
         let direction;
-        if index %2 == 0 {
+        if index== 0 {
              direction=Direction::Right;
         } else {
-             direction=Direction::Down;
+             direction=Direction::Right;
         }
-        /*
+        if index%18 == 0 {
+            let _ = one_direction_view(self, world, Down, 5);
+        }
+        if index == 3 {
+            let _ = one_direction_view(self, world, Down, 7);
+
+        }
         if index <= 25 {
             direction = Direction::Right;
         } else if index > 25 && index <= 27 {
@@ -121,7 +129,9 @@ impl Sentient for ExampleRobot {
             }
         }
          */
-        let _ = go(self, world, direction);
+
+        //let _ = go(self, world, direction);
+        /*
         if index < 300 {
             let _ = destroy(self, world, Direction::Right);
             let _ = destroy(self, world, Direction::Left);
@@ -165,6 +175,7 @@ impl Sentient for ExampleRobot {
                 }
             }
         }
+         */
         //debug
         println!("{}", index);
         *self.iterations.lock().unwrap() = index + 1;
