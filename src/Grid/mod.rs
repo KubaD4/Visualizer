@@ -2,7 +2,7 @@ extern crate piston_window;
 
 use piston_window::*;
 use piston_window::{Context, G2d, rectangle};
-use piston_window::types::{Color, ColorComponent};
+use piston_window::types::{Color};
 
 type ColorMatrix = Vec<Vec<[f32; 4]>>;
 /*
@@ -24,7 +24,7 @@ pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
  */
 
-pub const MAP_SIZE: usize = 20;
+pub const MAP_SIZE: usize = 700;
 pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
 // Assuming RECT_SIZE is defined to fit the grid within the window minus padding
 // And since we want the window 200 pixels greater than the grid, we adjust the calculation accordingly
@@ -145,11 +145,10 @@ pub fn draw_robot_view(
 
     // Iterate over the 3x3 matrix for rectangles
     for (i, row) in rect_matrix.iter().enumerate() {
-        for (j, &rect_color) in row.iter().enumerate() {
+        for (j, _) in row.iter().enumerate() {
             // Calculate the position for each rectangle
             let x = grid_start_x + (j as f64 * rect_size);
             let y = grid_start_y + (i as f64 * rect_size);
-            let none_rect_color=[105.0/255.0 , 105.0/255.0 , 105.0/255.0 , 1.0];
 
             // Draw the rectangle
             if let Some(&rect_color) = rect_matrix.get(j).and_then(|r| r.get(i)) {

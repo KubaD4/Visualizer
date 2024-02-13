@@ -20,7 +20,7 @@ use robotics_lib::world::tile::TileType::{
 };
 use robotics_lib::world::world_generator::Generator;
 use Visualizer::Grid::*;
-use worldgen_unwrap::*;
+//use worldgen_unwrap::*;
 //use worldgen_unwrap::*;
 use Visualizer::robot::{ExampleRobot, Visualizable};
 use Visualizer::Util::{convert_content_to_color_matrix, convert_robot_content_view_to_color_matrix, convert_robot_view_to_color_matrix, convert_to_color_matrix, Infos};
@@ -80,13 +80,16 @@ fn main() {
 
 
                         if i == 0 {
-                            i_content = 1;
+                            i_content = 16;  //first row
+                        } else if i == 1 {
+                            i_content = 1;  //second row
                         } else if i == 2 {
-                            i_content = 10;
+                            i_content = 16; //third row
                         } else {
-                            i_content = 16
-                        }   //first row filled with Coin, third row filled with Fish, other rows are None
+                            i_content = 16  //other rows
+                        }
 
+                        /*
                         if i == 0 {
                             i_tiletype = 2;
                         } else if i == 2 {
@@ -94,7 +97,9 @@ fn main() {
                         } else {
                             i_tiletype = 3
                         }   //first row filled with Sand, third row filled with Street, other rows are Grass
+                         */
 
+                        i_tiletype = 3; //only grass for better debug
 
 
                         let i_size = rng.gen_range(0..=20);
@@ -163,7 +168,7 @@ fn main() {
                     if *i.lock().unwrap() > 2000 {
                         match init_frames.lock() {
                             Ok(lock) => {
-                                if let Err(e) = lock.from_frames_to_gif() {
+                                if let Err(e) = lock.convert_frames_to_gif() {
                                     println!("error creating the gif: {}", e)
                                 }
                             }
@@ -282,7 +287,7 @@ fn main() {
                     eprintln!("Failed to send data through the channel: {}\nWindow will use the default value for each informaton", e);
                 }
             }
-            thread::sleep(Duration::from_secs_f64(0.02));
+            thread::sleep(Duration::from_secs_f64(0.01));
             //thread::sleep(Duration::from_secs_f64(3.0));
         }
     });

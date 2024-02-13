@@ -1,19 +1,18 @@
-use crate::GifFrame::Frames as OtherFrames;
-use crate::Util::{backpack_to_text, clear_png_files_in_directory, play_sound, DEFAULT_PNGS_PATH};
-use rand::{thread_rng, Rng};
-use robotics_lib::energy::Energy;
-use robotics_lib::event::events::Event;
-use robotics_lib::interface::Direction::{Down, Left, Right, Up};
-use robotics_lib::interface::{destroy, go, robot_view, Direction, one_direction_view, get_score};
-use robotics_lib::interface::{put, robot_map};
-use robotics_lib::runner::backpack::BackPack;
-use robotics_lib::runner::{Robot, Runnable};
-use robotics_lib::world::coordinates::Coordinate;
-use robotics_lib::world::tile::Content::{Coin, Garbage, Rock};
-use robotics_lib::world::tile::Tile;
-use robotics_lib::world::World;
 use std::sync::{Arc, Mutex};
 use std::thread;
+
+use robotics_lib::energy::Energy;
+use robotics_lib::event::events::Event;
+use robotics_lib::interface::{Direction, get_score, go, robot_view};
+use robotics_lib::interface::robot_map;
+use robotics_lib::runner::{Robot, Runnable};
+use robotics_lib::runner::backpack::BackPack;
+use robotics_lib::world::coordinates::Coordinate;
+use robotics_lib::world::tile::Tile;
+use robotics_lib::world::World;
+
+use crate::GifFrame::Frames as OtherFrames;
+use crate::Util::{backpack_to_text, clear_png_files_in_directory, DEFAULT_PNGS_PATH, play_sound, update_resource};
 
 const PLAY_SOUNDS: bool = false;
 
@@ -40,8 +39,9 @@ pub struct ExampleRobot {
     current_robot_backpack: Arc<Mutex<String>>,
     score: Arc<Mutex<f32>>,
     current_robot_coordinates: Arc<Mutex<(usize, usize)>>,
-    current_robot_energy: Arc<Mutex<usize>>
+    current_robot_energy: Arc<Mutex<usize>>,
 }
+
 impl Visualizable for ExampleRobot {
     fn get_init_frames(&self) -> Arc<Mutex<OtherFrames>> {
         self.init_frames.clone()
@@ -64,8 +64,8 @@ impl Visualizable for ExampleRobot {
     fn get_current_energy(&self) -> Arc<Mutex<usize>> {
         self.current_robot_energy.clone()
     }
-
 }
+
 impl ExampleRobot {
     pub fn new(robot: Robot, iterations: Arc<Mutex<usize>>) -> Self {
         Self {
@@ -77,10 +77,12 @@ impl ExampleRobot {
             current_robot_backpack: Arc::new(Mutex::new(String::new())),
             score: Arc::new(Mutex::new(0.0)),
             current_robot_coordinates: Arc::new(Mutex::new((0, 0))),
-            current_robot_energy: Arc::new(Mutex::new(0))
+            current_robot_energy: Arc::new(Mutex::new(0)),
         }
     }
 }
+
+//used for debug purpose
 impl Sentient for ExampleRobot {
     fn act(&mut self, world: &mut World) {
         let index = *self.iterations.lock().unwrap(); //for debug
@@ -88,21 +90,17 @@ impl Sentient for ExampleRobot {
         //example of AI to degub visualizer
         //let environmental_conditions = look_at_sky(world);
         //let _ = one_direction_view(self, world, Right, index);
-        let _ = one_direction_view(self, world, Right, 5);
-        /*
+        //let _ = one_direction_view(self, world, Right, 5);
         let direction;
-        if index== 0 {
-             direction=Direction::Right;
-        } else {
-             direction=Direction::Right;
-        }
-        if index%18 == 0 {
-            let _ = one_direction_view(self, world, Down, 5);
-        }
-        if index == 3 {
-            let _ = one_direction_view(self, world, Down, 7);
 
+        if index % 2 == 0 {
+            direction = Direction::Down;
+        } else {
+            direction = Direction::Right;
         }
+        let _ = go(self, world, direction);
+
+        /*
         if index <= 25 {
             direction = Direction::Right;
         } else if index > 25 && index <= 27 {
@@ -128,7 +126,7 @@ impl Sentient for ExampleRobot {
                 _ => direction = Direction::Right,
             }
         }
-         */
+        */
 
         //let _ = go(self, world, direction);
         /*
@@ -197,7 +195,6 @@ impl Runnable for ExampleRobot {
         if let Err(e) = update_robot_score(self, new_score) {
             eprintln!("{}", e)
         }
-
     }
 
     //non modificare le seguenti righe (potete aggiungere roba se vi serve per debug ma non rimuovete le chiamate a metodi ecc)
@@ -208,7 +205,6 @@ impl Runnable for ExampleRobot {
                 if let Err(e) = clear_png_files_in_directory(DEFAULT_PNGS_PATH) {
                     eprintln!("Couldnt clear png path: {}", e)
                 }
-
             }
             Event::Terminated => {}
             Event::TimeChanged(_) => {
@@ -251,20 +247,6 @@ impl Runnable for ExampleRobot {
                 println!("moved");
 
                 //INIT_FRAMES.lock().unwrap().add_frame(&CURRENT_ROBOT_MAP.lock().unwrap());
-                match self.get_init_frames().lock() {
-                    Ok(mut init_frame_lock) => match &self.get_current_robot_map().lock() {
-                        Ok(current_map_lock) => init_frame_lock.add_frame(current_map_lock),
-                        Err(e) => {
-                            eprintln!(
-                                "Couldnt lock CURRENT_ROBOT_MAP in HandleEvent(Moved): {}",
-                                e
-                            )
-                        }
-                    },
-                    Err(e) => {
-                        eprintln!("Couldnt lock INIT_FRAMES in HandleEvent(Moved): {}", e)
-                    }
-                }
             }
             Event::TileContentUpdated(_, _) => {}
             Event::AddedToBackpack(_, _) => {
@@ -321,84 +303,44 @@ impl Runnable for ExampleRobot {
 }
 
 pub fn update_robot_view<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
-where
-    R: Visualizable + Runnable,
+    where
+        R: Visualizable + Runnable,
 {
-    let new_view = robot_view(robot, world);
-    match robot.get_current_robot_view().lock() {
-        Ok(lock) => {
-            let mut view_lock = lock;
-            *view_lock = new_view;
-            Ok(())
-        }
-        Err(_) => Err("Mutex was poisoned".to_string()),
-    }
+    update_resource(&robot.get_current_robot_view(), robot_view(robot, world))
 }
 
 pub fn update_robot_map<'a, R>(robot: &'a R, world: &'a World) -> Result<(), String>
-where
-    R: Visualizable + Runnable,
+    where
+        R: Visualizable + Runnable,
 {
-    let new_map = robot_map(world); // Doing it before the assignment in order to reduce the lock() time
-    match robot.get_current_robot_map().lock() {
-        Ok(lock) => {
-            let mut map_lock = lock;
-            *map_lock = new_map;
-            Ok(())
-        }
-        Err(_) => Err("Mutex was poisoned".to_string()),
-    }
+    update_resource(&robot.get_current_robot_map(), robot_map(world))
 }
 
 pub fn update_robot_coord<'a, R>(robot: &'a R, new_coord: &'a Coordinate) -> Result<(), String>
-where
-    R: Visualizable + Runnable,
+    where
+        R: Visualizable + Runnable,
 {
-    match robot.get_current_robot_coordinates().lock() {
-        Ok(mut lock) => {
-            *lock = (new_coord.get_row(), new_coord.get_col());
-            Ok(())
-        }
-        Err(_) => Err("Mutex was poisoned".to_string()),
-    }
+    update_resource(&robot.get_current_robot_coordinates(), (new_coord.get_row(), new_coord.get_col()))
 }
 
 pub fn update_robot_backpack<'a, R>(robot: &'a R, back_pack: &'a BackPack) -> Result<(), String>
-where
-    R: Visualizable + Runnable,
+    where
+        R: Visualizable + Runnable,
 {
-    match robot.get_current_robot_backpack().lock() {
-        Ok(mut lock) => {
-            *lock = backpack_to_text(back_pack);
-            Ok(())
-        }
-        Err(_) => Err("Mutex was poisoned".to_string()),
-    }
+    update_resource(&robot.get_current_robot_backpack(), backpack_to_text(back_pack))
 }
 
-//TODO: parte nuova in caso di problemi con github
 pub fn update_robot_score<'a, R>(robot: &'a R, new_score: f32) -> Result<(), String>
-where
-    R: Visualizable + Runnable,
+    where
+        R: Visualizable + Runnable,
 {
-    match robot.get_score().lock() {
-        Ok(mut lock) => {
-            *lock = new_score;
-            Ok(())
-        }
-        Err(_) => Err("Mutex was poisoned".to_string()),
-    }
+    update_resource(&robot.get_score(), new_score)
 }
 
 pub fn update_robot_energy<'a, R>(robot: &'a R, new_energy: &'a Energy) -> Result<(), String>
     where
         R: Visualizable + Runnable,
 {
-    match robot.get_current_energy().lock() {
-        Ok(mut lock) => {
-            *lock = new_energy.get_energy_level();
-            Ok(())
-        }
-        Err(_) => Err("Mutex was poisoned".to_string()),
-    }
+    update_resource(&robot.get_current_energy(), new_energy.get_energy_level())
 }
+

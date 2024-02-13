@@ -167,7 +167,7 @@ pub(crate) fn match_color_to_content(content: &Content) -> (u8, u8, u8, u8) {
         Content::Bush(_) => (50, 205, 50, 255),
         Content::JollyBlock(_) => (255, 192, 203, 255),
         Content::Scarecrow => (160, 82, 45, 255),
-        Content::None => (255, 255, 255, 255),
+        Content::None => (0, 0, 0, 0),
     }
 }
 
@@ -301,5 +301,15 @@ pub fn convert_content_to_color_matrix(
                 color_matrix_guard[j][i] = color;
             }
         }
+    }
+}
+
+pub fn update_resource<T>(resource: &Mutex<T>, new_value: T) -> Result<(), String> {
+    match resource.lock() {
+        Ok(mut lock) => {
+            *lock = new_value;
+            Ok(())
+        },
+        Err(_) => Err("Mutex was poisoned".to_string()),
     }
 }

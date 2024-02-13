@@ -94,7 +94,7 @@ impl Frames {
         }
     }
 
-    pub fn from_frames_to_gif(&self) -> Result<(), String> {
+    pub fn convert_frames_to_gif(&self) -> Result<(), String> {
         let mut waiting_counter: usize = 0;
         let received_frames = self.received_frames;
         let mut atomic_processed_frames = self.saved_frames.clone().load(Ordering::SeqCst);
