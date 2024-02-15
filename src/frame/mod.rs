@@ -101,7 +101,7 @@ impl Frames {
             sleep(polling_interval);
             waiting_counter += 1;
             if waiting_counter == MAX_WAITING_CYCLES {
-                if atomic_fails >= MAX_FAILURE_TOLLERANCE {
+                if atomic_fails >= MAX_FAILURE_TOLERANCE {
                     return Err(String::from("too many failure"));
                 }
             }
