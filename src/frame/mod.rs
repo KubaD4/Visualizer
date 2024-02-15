@@ -5,39 +5,30 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-use crate::Util::{gif_creator, id_to_path_string, match_color_to_type};
-use robotics_lib::world::tile::{Tile, TileType};
+use crate::util::{gif_creator, id_to_path_string, match_color_to_type};
+use robotics_lib::world::tile::{Tile};
 
-const MAX_FAILURE_TOLLERANCE: usize = 5;
+const MAX_FAILURE_TOLERANCE: usize = 5;
 const MAX_WAITING_CYCLES: usize = 10;
+const N_OF_BYTES_PER_PIXEL: usize = 4;
 
-///received_frames: to count how much time is requested to save a frame
+///received_frames: it counts the amount of requests to process a Frame that have been received.
 /// processed_frames: it counts the amount of frames that are successfully saved.
-/// fails: it counts the amount of frames that cant be saved due to errors (handled in the following methods)
+/// fails: Count the amount of frames that could not be saved due to errors
 /// the type Arc<AtomicUsize> is due to the interaction of multiple threads with the parameters of the struct.
 pub struct Frames {
     received_frames: usize,
     saved_frames: Arc<AtomicUsize>,
-    fails: Arc<AtomicUsize>, //sender: Option<mpsc::Sender<Frame>>,
+    fails: Arc<AtomicUsize>,
 }
 
 impl Frames {
     pub fn new() -> Self {
-        //let (sender, receiver) = mpsc::channel::<Frame>();
-        // Spawn a worker thread that listens for frames to save -> it was to slow
-        /*
-        thread::spawn(move || {
-            for frame in receiver {
-                // Replace this with your actual logic
-                frame.save_frame();
-            }
-        });
-         */
 
         Self {
             received_frames: 0,
             saved_frames: Arc::new(AtomicUsize::new(0)),
-            fails: Arc::new(AtomicUsize::new(0)), //sender: Some(sender)
+            fails: Arc::new(AtomicUsize::new(0)),
         }
     }
     pub fn add_frame(&mut self, robot_map: &Option<Vec<Vec<Option<Tile>>>>) {
@@ -117,31 +108,24 @@ impl Frames {
         }
         gif_creator()
     }
-
-    /*
-    pub fn save_frames(mut self) {
-        let handles: Vec<_> = self.frames.into_iter().map(|frame| {
-            thread::spawn(move || {
-                // Replace this with your actual logic
-                frame.save_frame()
-            })
-        }).collect();
-
-        // Wait for all threads to complete
-        for handle in handles {
-            handle.join().unwrap();
-        }
-    }
-     */
 }
 
-const N_OF_BYTES_PER_PIXEL: usize = 4;
+/// Represents a single frame in the robot's journey, encapsulating the visual state as an image.
+///
+/// Attributes:
+/// - `image`: The visual representation of the robot's map state.
+/// - `id`: A unique identifier for the frame, used for saving and referencing.
 pub struct Frame {
     image: DynamicImage,
     id: usize,
 }
 
 impl Frame {
+    /// Creates a new `Frame` instance from a given robot map state.
+    ///
+    /// Arguments:
+    /// - `robot_map`: The robot's current discovered map to be visualized.
+    /// - `id`: The unique identifier for the frame.
     pub fn new_from_robot_map(robot_map: &Option<Vec<Vec<Option<Tile>>>>, id: usize) -> Self {
         Self {
             image: Self::robot_map_to_dynamic_image(robot_map),
@@ -149,29 +133,7 @@ impl Frame {
         }
     }
 
-    fn map_to_dynamic_image(map: &Vec<Vec<TileType>>) -> DynamicImage {
-        let width = map[0].len();
-        let height = map.len();
-
-        let mut pixel_data: Vec<u8> = Vec::with_capacity(width * height * N_OF_BYTES_PER_PIXEL);
-        //total number of pixels in the image, 4 bytes per pixel (R,G,B and A=transparency)
-
-        for row in map {
-            for tile in row {
-                let color_rgba = match_color_to_type(tile);
-                pixel_data.push(color_rgba.0);
-                pixel_data.push(color_rgba.1);
-                pixel_data.push(color_rgba.2);
-                pixel_data.push(color_rgba.3);
-            }
-        }
-
-        let image_buffer =
-            image::ImageBuffer::<Rgba<u8>, _>::from_vec(width as u32, height as u32, pixel_data)
-                .expect("Failed to create ImageBuffer");
-        DynamicImage::ImageRgba8(image_buffer)
-    }
-
+    /// Creates a `DynamicImage` from a given robot map
     fn robot_map_to_dynamic_image(map: &Option<Vec<Vec<Option<Tile>>>>) -> DynamicImage {
         let dim = map.clone().unwrap_or(vec![]).len();
 
@@ -202,6 +164,14 @@ impl Frame {
         DynamicImage::ImageRgba8(image_buffer)
     }
 
+    /// Saves the frame to disk.
+    ///
+    /// This method attempts to save the frame's image to a predetermined location, using the frame's
+    /// ID to generate a unique file name.
+    ///
+    /// Returns:
+    /// - `Ok(())` if the image is successfully saved.
+    /// - `Err(ImageError)` containing details of any error encountered during saving.
     pub fn save_frame(&self) -> Result<(), ImageError> {
         match self.image.save(id_to_path_string(self.id)) {
             Ok(_) => {

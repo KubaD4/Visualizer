@@ -9,6 +9,7 @@ dependencies = [
  "crossbeam-channel",
  "find_folder",
  "image 0.24.8",
+ "log",
  "noise",
  "piston2d-graphics 0.44.0",
  "piston_window",

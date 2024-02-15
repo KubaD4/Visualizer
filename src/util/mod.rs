@@ -11,6 +11,15 @@ use std::{fs, io};
 
 use robotics_lib::world::tile::{Content, Tile, TileType};
 
+///# Types
+/// * `Infos': The type used to pass information from the robot's channel to the UI
+///     * Tile Type converted to color matrix
+///     * Content converted to color matrix
+///     * Coordinates of the robot
+///     * Robot View
+///     * Backpack
+///     * Energy
+///     * Score
 pub type Infos = (
     Vec<Vec<[f32; 4]>>,
     Vec<Vec<[f32; 4]>>,
@@ -21,13 +30,19 @@ pub type Infos = (
     f32
 );
 
-//pub const DEFAULT_PNGS_PATH: &str = "../pngs";
-//pub const DEFAULT_SOUNDS_PATH: &str = "../sounds";
+///# Constants
+///* `DEFAULT_PNGS_PATH`: The default directory path where PNG files are stored.
+///* `DEFAULT_SOUNDS_PATH`: The default directory path where sound files are stored.
 pub const DEFAULT_PNGS_PATH: &str = "../pngs";
 pub const DEFAULT_SOUNDS_PATH: &str = "../sounds";
 
-//Path where to save/load from png's
-
+/// Converts a numerical ID to a file path string.
+///
+/// # Arguments
+/// * `id` - The frame ID to convert.
+///
+/// # Returns
+/// A file path string with leading zeroes based on the ID's value.
 pub(crate) fn id_to_path_string(id: usize) -> String {
     match id {
         0..=9 => format!("{}/0000{}.png", DEFAULT_PNGS_PATH, id),
@@ -39,6 +54,11 @@ pub(crate) fn id_to_path_string(id: usize) -> String {
     }
 }
 
+/// Generates a GIF animation from sequentially numbered PNG files found in the
+/// default PNG directory. Utilizes FFmpeg for the conversion process.
+///
+/// # Returns
+/// A result indicating success or failure of the GIF creation process.
 pub fn gif_creator() -> Result<(), String> {
     // Specify the directory containing the PNG files
     let directory = DEFAULT_PNGS_PATH;
@@ -49,7 +69,7 @@ pub fn gif_creator() -> Result<(), String> {
         .args(&[
             "-y", // Overwrite output files without asking
             "-framerate",
-            "24", // Set frame rate
+            "60", // Set frame rate
             "-f",
             "image2", // Force format
             "-i",
@@ -77,6 +97,13 @@ pub fn gif_creator() -> Result<(), String> {
     };
 }
 
+/// Clears all PNG files from the given directory path.
+///
+/// # Arguments
+/// * `dir_path` - The path of the directory from which to remove PNG files.
+///
+/// # Returns
+/// A result indicating the success or failure of the file removal operation.
 pub fn clear_png_files_in_directory(dir_path: &str) -> io::Result<()> {
     let path = Path::new(dir_path);
 
@@ -101,38 +128,13 @@ pub fn clear_png_files_in_directory(dir_path: &str) -> io::Result<()> {
     Ok(())
 }
 
-/*
-pub(crate) fn save_image(map: &Vec<Vec<TileType>>, index: usize) {
-    let width = map[0].len();
-    let height = map.len();
-
-    let mut pixel_data: Vec<u8> = Vec::with_capacity(width * height * 4); //total number of pixels in the image,
-    //4 bytes per pixel (R,G,B and A=transparency)
-
-    for row in map {
-        for tile in row {
-            let color_rgba = match_color_to_type(tile);
-            pixel_data.push(color_rgba.0);
-            pixel_data.push(color_rgba.1);
-            pixel_data.push(color_rgba.2);
-            pixel_data.push(color_rgba.3);
-        }
-    }
-
-    let image_buffer =
-        image::ImageBuffer::<Rgba<u8>, _>::from_vec(width as u32, height as u32, pixel_data)
-            .expect("Failed to create ImageBuffer");
-
-    let dynamic_image = DynamicImage::ImageRgba8(image_buffer);
-
-    let mut path;
-    path = id_to_pathString(index);
-    dynamic_image
-        .save(path)
-        .expect("Failed to save PNG image");
-    println!("finished saving image {}", index);
-}*/
-
+/// Converts a `TileType` or `Content` to its corresponding RGBA color representation.
+///
+/// # Arguments
+/// * `tile_type` or `content` - The tile type or content to convert.
+///
+/// # Returns
+/// An RGBA color tuple.
 pub(crate) fn match_color_to_type(tile_type: &TileType) -> (u8, u8, u8, u8) {
     match tile_type {
         TileType::Grass => (0, 255, 0, 255),
@@ -148,7 +150,6 @@ pub(crate) fn match_color_to_type(tile_type: &TileType) -> (u8, u8, u8, u8) {
         TileType::Snow => (255, 255, 255, 255),
     }
 }
-
 pub(crate) fn match_color_to_content(content: &Content) -> (u8, u8, u8, u8) {
     match content {
         // match on all variants giving a rgba color for each
@@ -171,6 +172,13 @@ pub(crate) fn match_color_to_content(content: &Content) -> (u8, u8, u8, u8) {
     }
 }
 
+/// Converts a `TileType` or `Content` to a Piston engine compatible color array.
+///
+/// # Arguments
+/// * `tile_type` or `content` - The tile type or content to convert.
+///
+/// # Returns
+/// A Piston-compatible color array.
 pub fn match_color_to_type_piston(tile_type: &TileType) -> [f32; 4] {
     let almost_result = match_color_to_type(tile_type);
 
@@ -181,7 +189,6 @@ pub fn match_color_to_type_piston(tile_type: &TileType) -> [f32; 4] {
         (almost_result.3 as f32)/255.0,
     ]
 }
-
 pub fn match_content_color_to_type_piston(tile_contet: &Content) -> [f32; 4] {
     let almost_result = match_color_to_content(tile_contet);
     [
@@ -192,6 +199,15 @@ pub fn match_content_color_to_type_piston(tile_contet: &Content) -> [f32; 4] {
     ]
 }
 
+/// Plays a sound file from the default sounds directory with an optional
+/// amplification value.
+///
+/// # Arguments
+/// * `path` - The path to the sound file, relative to the default sounds directory.
+/// * `amplify_value` - The amplification factor for the sound playback.
+///
+/// # Returns
+/// A result indicating success or failure of the sound playback operation.
 pub fn play_sound(path: &str, amplify_value: f32) -> Result<(), String> {
     let final_path = format!("{}{}", DEFAULT_SOUNDS_PATH, path);
     // Try to get the default output stream
@@ -218,6 +234,14 @@ pub fn play_sound(path: &str, amplify_value: f32) -> Result<(), String> {
     Ok(())
 }
 
+/// Converts the contents of a `BackPack` object into a formatted string
+/// representation, listing each item and its quantity.
+///
+/// # Arguments
+/// * `backpack` - The `BackPack` object to convert.
+///
+/// # Returns
+/// A string representation of the backpack's contents.
 pub fn backpack_to_text(backpack: &BackPack) -> String {
     if backpack.get_size() > 0 && !backpack.get_contents().is_empty() {
         let mut result = format!("Backpack (Size: {}):  ", backpack.get_size());
@@ -251,6 +275,14 @@ pub fn convert_to_color_matrix(
     }
 }
 
+/// Converts a matrix of `Tile`s, `Content`, or robot views into a corresponding
+/// color matrix for visualization purposes, using predefined color mappings.
+///
+/// # Arguments
+/// * Various, depending on the function.
+///
+/// # Returns
+/// A color matrix for use in visual representations.
 pub fn convert_robot_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<Vec<[f32; 4]>> {
     let mut result = vec![vec![[0.0, 0.0, 0.0, 0.0]; 3]; 3];
 
@@ -267,7 +299,6 @@ pub fn convert_robot_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<
 
     result
 }
-
 pub fn convert_robot_content_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>) -> Vec<Vec<[f32; 4]>> {
     let mut result = vec![vec![[0.0, 0.0, 0.0, 1.0]; 3]; 3];
 
@@ -284,7 +315,6 @@ pub fn convert_robot_content_view_to_color_matrix(view: &Vec<Vec<Option<Tile>>>)
 
     result
 }
-
 pub fn convert_content_to_color_matrix(
     tile_matrix: &Option<Vec<Vec<Option<Tile>>>>,
     color_matrix: &Arc<Mutex<Vec<Vec<[f32; 4]>>>>,
@@ -304,6 +334,17 @@ pub fn convert_content_to_color_matrix(
     }
 }
 
+/// Safely updates a shared resource, represented by a `Mutex`, with a new value.
+///
+/// # Type Parameters
+/// * `T` - The type of the resource to update.
+///
+/// # Arguments
+/// * `resource` - A reference to the `Mutex` guarding the resource.
+/// * `new_value` - The new value to assign to the resource.
+///
+/// # Returns
+/// A result indicating success or the failure reason.
 pub fn update_resource<T>(resource: &Mutex<T>, new_value: T) -> Result<(), String> {
     match resource.lock() {
         Ok(mut lock) => {

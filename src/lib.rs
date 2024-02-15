@@ -1,7 +1,7 @@
-pub mod GifFrame;
+pub mod frame;
 
-pub mod Util;
+pub mod util;
 
-pub mod Grid;
+pub mod grid;
 
 pub mod robot;

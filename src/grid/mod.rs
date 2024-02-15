@@ -5,41 +5,36 @@ use piston_window::{Context, G2d, rectangle};
 use piston_window::types::{Color};
 
 type ColorMatrix = Vec<Vec<[f32; 4]>>;
-/*
-pub const MAP_SIZE: usize = 350;
-pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
-pub const WINDOW_SIZE: (usize, usize) = (MAP_SIZE+50, MAP_SIZE+50);
-pub const RECT_SIZE: f64 = ((WINDOW_SIZE.0-50) / GRID_SIZE.1) as f64;
-pub const ZOOM_AMOUNT: f64 = 0.35;
-pub const SCROLL_AMOUNT: f64 = 5.0;
- */
-
-/*
-pub const MAP_SIZE: usize = 750;
-pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
-pub const WINDOW_SIZE: (usize, usize) = (MAP_SIZE * 2, MAP_SIZE * 2);
-//pub const RECT_SIZE: f64 = ((WINDOW_SIZE.0-100) / GRID_SIZE.1) as f64;
-pub const RECT_SIZE: f64 = (WINDOW_SIZE.0 - 100) as f64 / MAP_SIZE as f64;
-pub const ZOOM_AMOUNT: f64 = 0.35;
-pub const SCROLL_AMOUNT: f64 = 5.0;
- */
 
 pub const MAP_SIZE: usize = 700;
 pub const GRID_SIZE: (usize, usize) = (MAP_SIZE, MAP_SIZE);
-// Assuming RECT_SIZE is defined to fit the grid within the window minus padding
-// And since we want the window 200 pixels greater than the grid, we adjust the calculation accordingly
-pub const RECT_SIZE: f64 = (/*MAP_SIZE as f64*/750.0 /*- 200.0*/) / MAP_SIZE as f64;
+pub const RECT_SIZE: f64 = 750.0 / MAP_SIZE as f64;
 pub const WINDOW_SIZE: (usize, usize) = (
     950,
     950,
 );
 
-//((MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, (MAP_SIZE as f64 * RECT_SIZE + 200.0) as usize, );
 pub const ZOOM_AMOUNT: f64 = 0.35;
 pub const SCROLL_AMOUNT: f64 = 5.0;
 
 pub const ROBOT_COLOR: [f32; 4] = [191.0 / 255.0, 139.0 / 255.0, 255.0 / 255.0, 1.0];
 
+/// Draws a grid based on a given color matrix, with support for zoom and scroll.
+///
+/// This function iterates over a matrix of colors to draw a grid of rectangles. It optimizes
+/// rendering by merging contiguous cells of the same color into single rectangles.
+/// Then, the function displays the robot's position on the produced grid
+///
+/// # Arguments
+/// * `matrix` - A reference to the primary color matrix for drawing rectangles.
+/// * `context` - The Piston window context for drawing.
+/// * `graphics` - The graphics backend for rendering shapes.
+/// * `grid_size` - The dimensions of the grid (in cells).
+/// * `rect_size` - The size of each cell in the grid.
+/// * `scroll_offset` - The current scroll offset for the view.
+/// * `zoom_factor` - The current zoom level for the view.
+/// * `coord_x` - The x-coordinate of the robot's position.
+/// * `coord_y` - The y-coordinate of the robot's position.
 pub fn draw_optimized_grid(
     matrix: &ColorMatrix,
     context: Context,
@@ -133,6 +128,18 @@ pub fn draw_optimized_grid(
     );
 }
 
+/// Draws a 3x3 grid representing the robot's immediate surroundings.
+///
+/// This function visualizes the robot's local view by drawing a 3x3 grid of
+/// rectangles(representing the TileType) and circles(representing the Content),
+/// where each cell's color is determined by the corresponding entry in the provided color matrices.
+///
+/// # Arguments
+/// * `rect_matrix` - Color matrix for the rectangles of the robot's view.
+/// * `circle_matrix` - Color matrix for the circles within the robot's view.
+/// * `context` - The Piston window context.
+/// * `graphics` - The graphics backend.
+/// * `rect_size` - The size of each rectangle and circle in the grid.
 pub fn draw_robot_view(
     rect_matrix: &Vec<Vec<[f32; 4]>>,
     circle_matrix: &Vec<Vec<[f32; 4]>>,
@@ -176,11 +183,17 @@ pub fn draw_robot_view(
     }
 }
 
-fn convert_colors(color:  [f64; 4]) ->  [f64; 4] {
-    [color.get(0).unwrap()/255.0,color.get(1).unwrap()/255.0,color.get(2).unwrap()/255.0,1.0]
-    //chiamo la funzione con valori decisi quindi so che contengono un valore -> unwrap non esplode
-}
-
+/// Draws a rectangle representing the robot's current energy level.
+///
+/// The color and length of the rectangle vary based on the robot's current energy, providing
+/// a visual indicator of its status.
+///
+/// # Arguments
+/// * `energy_level` - The current energy level of the robot.
+/// * `context` - The Piston window context.
+/// * `graphics` - The graphics backend.
+/// * `start_x` - The starting x-coordinate for the energy level rectangle.
+/// * `start_y` - The starting y-coordinate for the energy level rectangle.
 pub fn draw_energy_level(
     energy_level: usize,
     context: &Context,
@@ -225,7 +238,15 @@ pub fn draw_energy_level(
     );
 }
 
-
+/// Draws textual information at a specified position on the screen.
+///
+/// # Arguments
+/// * `ctx` - The Piston window context.
+/// * `graphics` - The graphics backend.
+/// * `glyphs` - The font glyphs for
+/// * `color` - The color of the text
+/// * `pos` - The position of the text
+/// * `text` - The actual text to draw
 pub fn draw_text(
     ctx: &Context,
     graphics: &mut G2d,

@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
+use log::error;
 
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
@@ -11,8 +12,8 @@ use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::tile::Tile;
 use robotics_lib::world::World;
 
-use crate::GifFrame::Frames as OtherFrames;
-use crate::Util::{backpack_to_text, clear_png_files_in_directory, DEFAULT_PNGS_PATH, play_sound, update_resource};
+use crate::frame::Frames as OtherFrames;
+use crate::util::{backpack_to_text, clear_png_files_in_directory, DEFAULT_PNGS_PATH, play_sound, update_resource};
 
 const PLAY_SOUNDS: bool = false;
 
@@ -184,7 +185,6 @@ impl Runnable for ExampleRobot {
     fn process_tick(&mut self, world: &mut World) {
         self.act(world);
         //non modificare le seguenti righe
-        //the following is something like *INITIAL_ROBOT_MAP.lock().unwrap() = robot_map(world);
         if let Err(e) = update_robot_map(self, world) {
             eprintln!("{}", e)
         }
@@ -246,7 +246,27 @@ impl Runnable for ExampleRobot {
 
                 println!("moved");
 
-                //INIT_FRAMES.lock().unwrap().add_frame(&CURRENT_ROBOT_MAP.lock().unwrap());
+                match self.init_frames.lock() {
+                    Ok(mut init_frame_lock) => {
+                       match &self.get_current_robot_map().lock() {
+                           Ok(current_map_lock) => {
+                               init_frame_lock.add_frame(current_map_lock)
+                           }
+                           Err(e) => {
+                               eprintln!(
+                                   "Coultnd lock CURRENT_ROBOT_MAP in HandleEvent(Moved): {}",
+                                   e
+                               )
+                           }
+                       }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "couldnt lock init_frames in HandleEvent(Moved): {}",
+                            e
+                        )
+                    }
+                }
             }
             Event::TileContentUpdated(_, _) => {}
             Event::AddedToBackpack(_, _) => {
@@ -255,7 +275,7 @@ impl Runnable for ExampleRobot {
                     eprintln!("Couldnt update backpack: {}", e)
                 }
                 //the function must sleep for a while to allow the sound to play (0.2s)
-                // so it is better to do it in another thread and let the main function keep going
+                //so it is better to do it in another thread and let the main function keep going
                 if PLAY_SOUNDS {
                     thread::spawn(|| {
                         if let Err(e) = play_sound("/AddedToBackpack.ogg", 0.5) {
